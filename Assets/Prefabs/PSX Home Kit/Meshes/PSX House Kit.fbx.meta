@@ -1,0 +1,279 @@
+fileFormatVersion: 2
+guid: cfbbfd26a4043f1479b2c8c1e1fcfe4e
+ModelImporter:
+  serializedVersion: 22200
+  internalIDToNameTable: []
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Door 1
+    second: {fileID: 2100000, guid: 70181736acfbd884996f34e98f3cfdf8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Door 2
+    second: {fileID: 2100000, guid: a6008ef2a3dc01342b726bd06ea08d83, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Glass 1
+    second: {fileID: 2100000, guid: 371bca600c7c14a4482bc6aa36353c7e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Glass 2
+    second: {fileID: 2100000, guid: 6b0f535989c6bcb4ca70561af97cc9b5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Half Wood Painted Wall 1
+    second: {fileID: 2100000, guid: 636b66368448be74c99d533b0e80c258, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Half Wood Painted Wall 1 Corner
+    second: {fileID: 2100000, guid: 14795aa951a4fcf4e95216bd541c2785, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Half Wood Painted Wall 2
+    second: {fileID: 2100000, guid: 784c9f0a4e10b484db78a1bdb3cbd95e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Half Wood Painted Wall 3
+    second: {fileID: 2100000, guid: c70b0872283e4b74ab2791ee7a80e645, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Long Straight Window Panel 1
+    second: {fileID: 2100000, guid: 1b478790251273c42b22f52fe5e6c487, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Long Straight Window Panel 2
+    second: {fileID: 2100000, guid: 4684d62513ee40c47b0732e1354b12b2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Long Straight Window Panel 3
+    second: {fileID: 2100000, guid: 28be59247c647434aa36f1b325d72832, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Long Window Panel 1
+    second: {fileID: 2100000, guid: 316328616ed9a974d82ff2f82b096585, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Metal Door
+    second: {fileID: 2100000, guid: 8b55bcf2e7476174db665ee03eadd21c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Stair Half Wood_
+    second: {fileID: 2100000, guid: ae1d0b66a3aa32d428b19d0afd230ac8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Stair Wall 1
+    second: {fileID: 2100000, guid: 34dd27b4b620e9340915da9963f0e0a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Carpet 1
+    second: {fileID: 2100000, guid: d42b70a7dce3a544d9b980e766b97d78, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Carpet 2
+    second: {fileID: 2100000, guid: 24dd4d6a8992c6a4aa7590a20fa279f7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Check
+    second: {fileID: 2100000, guid: cba16dc7bf8e1a349a8a0d4c21b4a248, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Concrete Beige
+    second: {fileID: 2100000, guid: d9443f8e3e710394191efcb81c02d43b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Plaster
+    second: {fileID: 2100000, guid: 6b5db69a7097b7144a8e689f6ccf2924, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Rock
+    second: {fileID: 2100000, guid: 5ee0df5259ad98a4e818dcb95e694143, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Rock 2
+    second: {fileID: 2100000, guid: bc91840d2e1404b448d6dde85761a131, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Wood 1
+    second: {fileID: 2100000, guid: 8382b0b027d40214e8b4f449f63ba683, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Wooden 2
+    second: {fileID: 2100000, guid: cf9bf06ebdbc5c5428a9a5506a784b10, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Wooden 3
+    second: {fileID: 2100000, guid: c5b603355019a88468edeb5e3b178784, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Tile Wooden 4
+    second: {fileID: 2100000, guid: 9e37d841c2a6d624eb9699c5b7671ee0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Vent Door
+    second: {fileID: 2100000, guid: bd914ec8c8dba95408117ebb4062fd95, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Vent Door Transparent
+    second: {fileID: 2100000, guid: 420ba8fd92a90e24ea17672a87ec93ae, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Vent Tunnel Corner
+    second: {fileID: 2100000, guid: 7f38e6dd881af954a95c2a9f843dbcc1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Vent Tunnel Long
+    second: {fileID: 2100000, guid: 69e73de27cae13940aa68c59b135ce68, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Wall Paper 1
+    second: {fileID: 2100000, guid: e1a25a8c2623b9045981af4557711ace, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Wall Paper 1.001
+    second: {fileID: 2100000, guid: ec1f2ed20fef3504db0a0b47ffe0a955, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Window Panel 1
+    second: {fileID: 2100000, guid: a72800e32fdc1404b9609cc31d1a7969, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Windows Square Panel 1
+    second: {fileID: 2100000, guid: 28cfec2dff32d4843b078dcb798f05b4, type: 2}
+  materials:
+    materialImportMode: 2
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    removeConstantScaleCurves: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importPhysicalCameras: 1
+    importVisibility: 0
+    importBlendShapes: 0
+    importCameras: 0
+    importLights: 0
+    nodeNameCollisionStrategy: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    bakeAxisConversion: 0
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    optimizeBones: 1
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVMarginMethod: 1
+    secondaryUVMinLightmapResolution: 40
+    secondaryUVMinObjectScale: 1
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    strictVertexDataChecks: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 0
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 1
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 0
+  humanoidOversampling: 1
+  avatarSetup: 0
+  addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 1
+  remapMaterialsIfMaterialImportModeIsNone: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

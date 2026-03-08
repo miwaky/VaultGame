@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dc9bfab8d4378142ac87b6ebf8329ab, type: 3}
+  m_Name: Gwen
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.SurvivorData
+  survivorName: Gwen
+  age: 35
+  portrait: {fileID: 0}
+  strength: 55
+  intelligence: 75
+  technical: 65
+  loyalty: 70
+  endurance: 65
