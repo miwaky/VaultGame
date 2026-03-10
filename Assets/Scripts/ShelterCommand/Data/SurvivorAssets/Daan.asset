@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Daan
   age: 38
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 0
+  negativeTrait: 7
+  hasRelation: 0
   strength: 60
   intelligence: 55
   technical: 90

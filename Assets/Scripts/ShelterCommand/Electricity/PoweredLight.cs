@@ -3,105 +3,52 @@ using UnityEngine;
 namespace ShelterCommand
 {
     /// <summary>
-    /// Attach to any GameObject containing a Light component.
-    /// The light switches on/off with the shelter's ElectricitySystem.
+    /// Lampe contrôlée par LightSwitch.
+    /// Le GO racine reste toujours actif.
+    /// Seul l'enfant LightSource est activé/désactivé.
     ///
-    /// baseLightIntensity is the intensity used at full power (Power = 1).
-    /// Set flickerOnRestore to true for a brief flicker effect when power comes back.
+    /// Setup :
+    ///   1. GO racine PoweredLight : actif, porte ce script + Collider (si interactable directement).
+    ///   2. GO enfant LightSource : contient la Light. Laisse-le inactif dans l'éditeur ou actif, peu importe.
+    ///   3. Assigne cet enfant dans le champ Light Source, ou nomme-le exactement "LightSource".
     /// </summary>
-    [RequireComponent(typeof(Light))]
     public class PoweredLight : MonoBehaviour
     {
-        [Header("Settings")]
-        [SerializeField] private float baseLightIntensity = 1f;
-        [SerializeField] private bool  flickerOnRestore   = true;
+        [Header("Références")]
+        [SerializeField] private GameObject lightSource;
 
-        [Header("Flicker")]
-        [SerializeField] private float flickerDuration     = 0.6f;
-        [SerializeField] private float flickerIntervalMin  = 0.04f;
-        [SerializeField] private float flickerIntervalMax  = 0.15f;
+        [Header("État initial")]
+        [SerializeField] private bool startOn = false;
 
-        private Light       managedLight;
-        private bool        isFlickering;
-        private float       flickerTimer;
-        private float       flickerEndTime;
-        private float       nextFlickerToggle;
-
-        private bool initialized;
+        /// <summary>Vrai si le LightSource est actif.</summary>
+        public bool IsOn => lightSource != null && lightSource.activeSelf;
 
         private void Awake()
         {
-            managedLight = GetComponent<Light>();
-            managedLight.enabled = false; // éteint par défaut, sera allumé par Start()
-        }
-
-        private void OnEnable()
-        {
-            if (ElectricitySystem.Instance != null)
-                ElectricitySystem.Instance.OnPowerChanged += ApplyPower;
-        }
-
-        private void OnDisable()
-        {
-            if (ElectricitySystem.Instance != null)
-                ElectricitySystem.Instance.OnPowerChanged -= ApplyPower;
+            if (lightSource == null)
+            {
+                Transform found = transform.Find("LightSource");
+                if (found != null)
+                    lightSource = found.gameObject;
+                else
+                    Debug.LogError($"[PoweredLight] '{gameObject.name}' — enfant 'LightSource' introuvable.");
+            }
         }
 
         private void Start()
         {
-            // Sync direct sans flicker au démarrage, quelle que soit l'ordre d'init
-            if (ElectricitySystem.Instance != null)
-                SetLightEnabled(ElectricitySystem.Instance.Power > 0f);
-            initialized = true;
+            // Force l'état initial sans dépendre de l'état éditeur du GO enfant
+            SetLight(startOn);
         }
 
-        private void Update()
+        /// <summary>Active ou désactive le LightSource.</summary>
+        public void SetLight(bool on)
         {
-            if (!isFlickering) return;
-
-            if (Time.time >= flickerEndTime)
-            {
-                isFlickering = false;
-                managedLight.enabled   = true;
-                managedLight.intensity = baseLightIntensity;
-                return;
-            }
-
-            if (Time.time >= nextFlickerToggle)
-            {
-                managedLight.enabled = !managedLight.enabled;
-                nextFlickerToggle    = Time.time + Random.Range(flickerIntervalMin, flickerIntervalMax);
-            }
+            if (lightSource != null)
+                lightSource.SetActive(on);
         }
 
-        private void ApplyPower(float power)
-        {
-            if (power > 0f)
-            {
-                // Flicker uniquement après le démarrage, pas lors de l'init initiale
-                if (flickerOnRestore && initialized)
-                    StartFlicker();
-                else
-                    SetLightEnabled(true);
-            }
-            else
-            {
-                isFlickering = false;
-                SetLightEnabled(false);
-            }
-        }
-
-        private void SetLightEnabled(bool on)
-        {
-            managedLight.enabled   = on;
-            managedLight.intensity = on ? baseLightIntensity : 0f;
-        }
-
-        private void StartFlicker()
-        {
-            isFlickering     = true;
-            flickerEndTime   = Time.time + flickerDuration;
-            nextFlickerToggle = Time.time;
-        }
+        /// <summary>Inverse l'état courant du LightSource.</summary>
+        public void Toggle() => SetLight(!IsOn);
     }
 }

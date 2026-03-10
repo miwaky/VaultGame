@@ -15,15 +15,12 @@ namespace ShelterCommand
         [SerializeField] private SurvivorManager survivorManager;
         [SerializeField] private ShelterResourceManager resourceManager;
         [SerializeField] private ShelterEventSystem eventSystem;
-        [SerializeField] private MissionSystem missionSystem;
         [SerializeField] private CameraRoomController cameraRoomController;
 
-        // Public accessors for UI systems
         public DayManager DayManager => dayManager;
         public SurvivorManager SurvivorManager => survivorManager;
         public ShelterResourceManager ResourceManager => resourceManager;
         public ShelterEventSystem EventSystem => eventSystem;
-        public MissionSystem MissionSystem => missionSystem;
         public CameraRoomController CameraRoomController => cameraRoomController;
 
         private void Awake()
@@ -55,11 +52,6 @@ namespace ShelterCommand
                 dayManager.OnGameWon += HandleGameWon;
             }
 
-            if (missionSystem != null)
-            {
-                missionSystem.OnMissionCompleted += HandleMissionCompleted;
-            }
-
             if (survivorManager != null)
             {
                 survivorManager.OnSurvivorDied += HandleSurvivorDied;
@@ -74,19 +66,6 @@ namespace ShelterCommand
         private void HandleGameWon()
         {
             Debug.Log("[ShelterGameManager] Victory!");
-        }
-
-        private void HandleMissionCompleted(MissionResult result)
-        {
-            if (result.Success)
-            {
-                resourceManager.AddResources(
-                    food: result.FoodGained,
-                    water: result.WaterGained,
-                    medicine: result.MedicineGained,
-                    materials: result.MaterialsGained
-                );
-            }
         }
 
         private void HandleSurvivorDied(SurvivorBehavior survivor)

@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: "Chlo\xE9"
   age: 28
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 1
+  negativeTrait: 5
+  hasRelation: 1
   strength: 40
   intelligence: 90
   technical: 70

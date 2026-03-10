@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Henk
   age: 42
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 0
+  negativeTrait: 6
+  hasRelation: 0
   strength: 80
   intelligence: 45
   technical: 70

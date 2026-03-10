@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Elsa
   age: 24
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 3
+  negativeTrait: 9
+  hasRelation: 1
   strength: 45
   intelligence: 80
   technical: 60

@@ -66,7 +66,9 @@ namespace ShelterCommand
             activeRoom = null;
             isInFullScreen = false;
 
-            if (fullScreenCamera != null)
+            // Only deactivate the full-screen camera if it was explicitly activated by SelectRoom.
+            // Never deactivate the player/main camera.
+            if (fullScreenCamera != null && fullScreenCamera.gameObject.activeSelf)
             {
                 fullScreenCamera.gameObject.SetActive(false);
             }

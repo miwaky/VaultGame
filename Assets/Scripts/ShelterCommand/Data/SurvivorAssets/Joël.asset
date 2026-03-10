@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: "Jo\xEBl"
   age: 33
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 1
+  negativeTrait: 8
+  hasRelation: 0
   strength: 65
   intelligence: 70
   technical: 80

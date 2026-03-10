@@ -56,17 +56,7 @@ namespace ShelterCommand
         [SerializeField] private Button cancelOrderButton;
 
         // ── Mission Map ─────────────────────────────────────────────────────────
-        [Header("Mission Map")]
-        [SerializeField] private GameObject missionMapPanel;
-        [SerializeField] private Button[] missionButtons;
-        [SerializeField] private TextMeshProUGUI missionInfoText;
-        [SerializeField] private Transform missionTeamListContainer;
-        [SerializeField] private Button launchMissionButton;
-        [SerializeField] private Button closeMissionMapButton;
-        [SerializeField] private Button foodProvMinusButton;
-        [SerializeField] private Button foodProvPlusButton;
-        [SerializeField] private Button waterProvMinusButton;
-        [SerializeField] private Button waterProvPlusButton;
+        // (removed)
 
         // ── Survivor Dossier ────────────────────────────────────────────────────
         [Header("Survivor Dossier")]
@@ -92,10 +82,7 @@ namespace ShelterCommand
         [SerializeField] private TextMeshProUGUI eventChoice1Label;
 
         // ── Mission Result ──────────────────────────────────────────────────────
-        [Header("Mission Result")]
-        [SerializeField] private GameObject missionResultPanel;
-        [SerializeField] private TextMeshProUGUI missionResultText;
-        [SerializeField] private Button closeMissionResultButton;
+        // (removed)
 
         // ── Notification ────────────────────────────────────────────────────────
         [Header("Notification")]
@@ -115,13 +102,7 @@ namespace ShelterCommand
         // ── State ───────────────────────────────────────────────────────────────
         private ShelterGameManager gm;
         private ShelterEvent pendingEvent;
-        private int selectedMissionIndex = -1;
-        private readonly HashSet<SurvivorBehavior> missionTeamSelection = new HashSet<SurvivorBehavior>();
         private static int radioIndex;
-
-        // Provisions chosen by the player before mission launch
-        private int missionProvisionFood  = 10;
-        private int missionProvisionWater = 10;
 
         // Camera cycling state
         private SecurityCamera[] availableCameras = new SecurityCamera[0];
@@ -150,7 +131,7 @@ namespace ShelterCommand
             HideAllPanels();
             RefreshStatusBar();
             // Sidebar hidden until a camera is selected
-            survivorSidebar?.SetActive(false);
+            SafeSetActive(survivorSidebar, false);
         }
 
         private void Update()
@@ -169,14 +150,13 @@ namespace ShelterCommand
             gm.SurvivorManager.OnSurvivorSelected += RefreshOrderPanel;
             gm.SurvivorManager.OnSurvivorDied += s => ShowNotification($"{s.SurvivorName} est mort.");
             gm.DayManager.OnDayStarted += d => { RefreshStatusBar(); ShowNotification($"Jour {d} — L'abri s'eveille."); };
-            gm.DayManager.OnGameOver += () => { HideAllPanels(); gameOverPanel?.SetActive(true); };
-            gm.DayManager.OnGameWon += () => { gameWonPanel?.SetActive(true); };
+            gm.DayManager.OnGameOver += () => { HideAllPanels(); SafeSetActive(gameOverPanel, true); };
+            gm.DayManager.OnGameWon += () => { SafeSetActive(gameWonPanel, true); };
             gm.EventSystem.OnEventTriggered += ShowEventPopup;
-            gm.MissionSystem.OnMissionCompleted += OnMissionCompleted;
             gm.CameraRoomController.OnSurvivorClickedInCamera += s =>
             {
                 gm.SurvivorManager.SelectSurvivor(s);
-                orderPanel?.SetActive(true);
+                SafeSetActive(orderPanel, true);
             };
         }
 
@@ -186,7 +166,6 @@ namespace ShelterCommand
         {
             closeCameraWallButton?.onClick.AddListener(CloseAllAndReturnToFPS);
             openDossierButton?.onClick.AddListener(ShowDossier);
-            openMissionMapButton?.onClick.AddListener(OpenMissionMap);
 
             camPrevButton?.onClick.AddListener(CycleCameraPrev);
             camNextButton?.onClick.AddListener(CycleCameraNext);
@@ -202,36 +181,18 @@ namespace ShelterCommand
             cancelOrderButton?.onClick.AddListener(() =>
             {
                 gm.SurvivorManager.DeselectSurvivor();
-                orderPanel?.SetActive(false);
+                SafeSetActive(orderPanel, false);
             });
-
-            closeMissionMapButton?.onClick.AddListener(CloseAllAndReturnToFPS);
-            launchMissionButton?.onClick.AddListener(LaunchSelectedMission);
-
-            // Provision adjustments
-            foodProvMinusButton?.onClick.AddListener(() => { missionProvisionFood  = Mathf.Max(0, missionProvisionFood  - 5); if (selectedMissionIndex >= 0) SelectMission(selectedMissionIndex); });
-            foodProvPlusButton?.onClick.AddListener(()  => { missionProvisionFood  = Mathf.Min(100, missionProvisionFood  + 5); if (selectedMissionIndex >= 0) SelectMission(selectedMissionIndex); });
-            waterProvMinusButton?.onClick.AddListener(() => { missionProvisionWater = Mathf.Max(0, missionProvisionWater - 5); if (selectedMissionIndex >= 0) SelectMission(selectedMissionIndex); });
-            waterProvPlusButton?.onClick.AddListener(()  => { missionProvisionWater = Mathf.Min(100, missionProvisionWater + 5); if (selectedMissionIndex >= 0) SelectMission(selectedMissionIndex); });
-            for (int i = 0; i < missionButtons.Length && i < MissionSystem.AvailableMissions.Length; i++)
-            {
-                int idx = i;
-                TextMeshProUGUI lbl = missionButtons[i]?.GetComponentInChildren<TextMeshProUGUI>();
-                if (lbl != null) lbl.text = MissionSystem.AvailableMissions[i].LocationName;
-                missionButtons[i]?.onClick.AddListener(() => SelectMission(idx));
-            }
 
             closeDossierButton?.onClick.AddListener(() =>
             {
-                // Close dossier → back to camera wall (not FPS)
-                survivorDossierPanel?.SetActive(false);
-                cameraWallPanel?.SetActive(true);
+                SafeSetActive(survivorDossierPanel, false);
+                SafeSetActive(cameraWallPanel, true);
             });
 
             closeRadioButton?.onClick.AddListener(CloseAllAndReturnToFPS);
             eventChoice0Button?.onClick.AddListener(() => ResolveEvent(0));
             eventChoice1Button?.onClick.AddListener(() => ResolveEvent(1));
-            closeMissionResultButton?.onClick.AddListener(() => missionResultPanel?.SetActive(false));
         }
 
         private void BindRenderTextures() { /* No-op — textures bound dynamically per SecurityCamera */ }
@@ -246,13 +207,13 @@ namespace ShelterCommand
         public void OpenCameraWall(SecurityCamera[] cameras)
         {
             HideAllPanels();
-            availableCameras  = cameras ?? new SecurityCamera[0];
+            availableCameras   = cameras ?? new SecurityCamera[0];
             currentCameraIndex = -1;
 
-            cameraWallPanel?.SetActive(true);
-            crosshair?.SetActive(false);
-            survivorSidebar?.SetActive(false);
-            orderPanel?.SetActive(false);
+            SafeSetActive(cameraWallPanel,  true);
+            SafeSetActive(crosshair,        false);
+            SafeSetActive(survivorSidebar,  false);
+            SafeSetActive(orderPanel,       false);
 
             if (availableCameras.Length > 0)
                 ShowCamera(0);
@@ -277,9 +238,9 @@ namespace ShelterCommand
                 cameraFeedImage.texture = cam.RenderTexture;
             SetText(cameraLabelText, $"{cam.CameraLabel}   [{index + 1} / {availableCameras.Length}]");
 
-            survivorSidebar?.SetActive(true);
+            SafeSetActive(survivorSidebar, true);
             PopulateFullSurvivorSidebar();
-            orderPanel?.SetActive(false);
+            SafeSetActive(orderPanel, false);
         }
 
         private void CycleCameraNext()
@@ -300,10 +261,7 @@ namespace ShelterCommand
         /// <summary>Opens mission map (called by MissionMapProp or bottom bar).</summary>
         public void OpenMissionMap()
         {
-            HideAllPanels();
-            missionMapPanel?.SetActive(true);
-            crosshair?.SetActive(false);
-            PopulateMissionTeamList();
+            // Mission system removed — no-op kept for scene reference compatibility.
         }
 
         // ── Survivor sidebar ──────────────────────────────────────────────────────
@@ -363,62 +321,15 @@ namespace ShelterCommand
             }
         }
 
-        // ── Mission team list ─────────────────────────────────────────────────────
-
-        private void PopulateMissionTeamList()
-        {
-            if (missionTeamListContainer == null) return;
-            foreach (Transform child in missionTeamListContainer) Destroy(child.gameObject);
-
-            foreach (SurvivorBehavior sb in gm.SurvivorManager.GetAliveSurvivors())
-            {
-                if (sb == null) continue;
-                SurvivorBehavior captured = sb;
-
-                GameObject row = new GameObject($"TeamRow_{sb.SurvivorName}");
-                row.transform.SetParent(missionTeamListContainer, false);
-                RectTransform rrt = row.AddComponent<RectTransform>();
-                rrt.sizeDelta = new Vector2(0, 28);
-                bool sel = missionTeamSelection.Contains(sb);
-                Image rowBg = row.AddComponent<Image>();
-                rowBg.color = sel ? new Color(0.2f, 0.5f, 0.2f, 0.9f) : new Color(0.08f, 0.12f, 0.08f, 0.8f);
-                Button rowBtn = row.AddComponent<Button>(); rowBtn.targetGraphic = rowBg;
-                rowBtn.onClick.AddListener(() => ToggleMissionTeamRow(captured, rowBg));
-
-                GameObject lbl = new GameObject("Label");
-                lbl.transform.SetParent(row.transform, false);
-                RectTransform lrt = lbl.AddComponent<RectTransform>();
-                lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one; lrt.sizeDelta = Vector2.zero;
-                TextMeshProUGUI tmp = lbl.AddComponent<TextMeshProUGUI>();
-                tmp.text = $"{sb.SurvivorName}  F:{sb.Hunger}  Ft:{sb.Fatigue}  M:{sb.Morale}";
-                tmp.fontSize = 10; tmp.alignment = TextAlignmentOptions.Center;
-                tmp.color = new Color(0.7f, 1f, 0.7f);
-            }
-        }
-
-        private void ToggleMissionTeamRow(SurvivorBehavior sb, Image bg)
-        {
-            if (missionTeamSelection.Contains(sb))
-            {
-                missionTeamSelection.Remove(sb);
-                bg.color = new Color(0.08f, 0.12f, 0.08f, 0.8f);
-            }
-            else
-            {
-                if (missionTeamSelection.Count >= 3) { ShowNotification("Maximum 3 membres dans l'équipe."); return; }
-                missionTeamSelection.Add(sb);
-                bg.color = new Color(0.2f, 0.5f, 0.2f, 0.9f);
-            }
-            if (selectedMissionIndex >= 0) SelectMission(selectedMissionIndex);
-        }
+        // ── Mission team list — REMOVED ───────────────────────────────────────────
 
         /// <summary>Shows radio panel with message (called by RadioProp).</summary>
         public void ShowRadioPanel(string message)
         {
             HideAllPanels();
-            radioPanel?.SetActive(true);
+            SafeSetActive(radioPanel, true);
             SetText(radioMessageText, message);
-            crosshair?.SetActive(false);
+            SafeSetActive(crosshair, false);
         }
 
         /// <summary>Shows a notification without locking FPS (called by BedProp).</summary>
@@ -428,12 +339,17 @@ namespace ShelterCommand
         public void CloseAllAndReturnToFPS()
         {
             if (pendingEvent != null) { ShowNotification("Resolvez l'evenement avant de continuer."); return; }
-            gm.CameraRoomController.DeselectRoom();
+
+            // Only deselect the room camera if one was actually selected (full-screen mode).
+            // When coming from the PC terminal there is no active room — skipping avoids
+            // accidentally disabling the full-screen camera (or the player camera if mis-assigned).
+            if (gm.CameraRoomController.IsInFullScreen)
+                gm.CameraRoomController.DeselectRoom();
+
             HideAllPanels();
-            crosshair?.SetActive(true);
+            SafeSetActive(crosshair, true);
             OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
             interact?.SetFPSLocked(false);
-            // Notifie le terminal que l'UI est fermée
             FindFirstObjectByType<ComputerTerminalProp>()?.NotifyTerminalClosed();
         }
 
@@ -441,8 +357,8 @@ namespace ShelterCommand
 
         private void ShowDossier()
         {
-            survivorDossierPanel?.SetActive(true);
-            cameraWallPanel?.SetActive(false);
+            SafeSetActive(survivorDossierPanel, true);
+            SafeSetActive(cameraWallPanel, false);
             PopulateDossier();
         }
 
@@ -507,20 +423,20 @@ namespace ShelterCommand
 
         private void RefreshOrderPanel(SurvivorBehavior survivor)
         {
-            if (survivor == null) { orderPanel?.SetActive(false); return; }
+            if (survivor == null) { SafeSetActive(orderPanel, false); return; }
             SetText(selectedSurvivorNameText, survivor.SurvivorName.ToUpper());
             string s = $"Faim:{survivor.Hunger}  Fatigue:{survivor.Fatigue}  Stress:{survivor.Stress}  Moral:{survivor.Morale}";
             if (survivor.IsSick) s += "  [MALADE]";
             if (survivor.IsArrested) s += "  [ARRETE]";
             SetText(selectedSurvivorStatsText, s);
-            orderPanel?.SetActive(true);
+            SafeSetActive(orderPanel, true);
         }
 
         private void IssueOrder(OrderType order)
         {
             bool ok = gm.SurvivorManager.IssueOrderToSelected(order, gm.ResourceManager.Resources);
             ShowNotification(ok ? $"Ordre : {OrderLabel(order)}" : "Ordre refuse — moral trop bas.");
-            orderPanel?.SetActive(false);
+            SafeSetActive(orderPanel, false);
         }
 
         private static string OrderLabel(OrderType o) => o switch
@@ -536,115 +452,25 @@ namespace ShelterCommand
             _ => o.ToString()
         };
 
-        // ── Missions ─────────────────────────────────────────────────────────────
-
-        private void SelectMission(int idx)
-        {
-            selectedMissionIndex = idx;
-            if (idx < 0 || idx >= MissionSystem.AvailableMissions.Length) return;
-            MissionDefinition m = MissionSystem.AvailableMissions[idx];
-            string teamStr = missionTeamSelection.Count == 0
-                ? "Aucune — sélectionnez ci-dessous (max 3)"
-                : string.Join(", ", new List<SurvivorBehavior>(missionTeamSelection).ConvertAll(s => s.SurvivorName));
-            SetText(missionInfoText,
-                $"<b>{m.LocationName}</b>\n{m.Description}\n" +
-                $"Succès : {m.SuccessChance * 100:F0}%   Durée : {m.DurationDays} jour(s)\n" +
-                $"Récompenses : +{m.RewardFood}N  +{m.RewardWater}E  +{m.RewardMedicine}Méd  +{m.RewardMaterials}Mat\n\n" +
-                $"Provisions emportées :\n" +
-                $"  Nourriture : {missionProvisionFood}  [utilisez - / +]\n" +
-                $"  Eau        : {missionProvisionWater}  [utilisez - / +]\n\n" +
-                $"Équipe : {teamStr}");
-        }
-
-        private void LaunchSelectedMission()
-        {
-            if (selectedMissionIndex < 0) { ShowNotification("Choisissez d'abord une mission."); return; }
-
-            List<SurvivorBehavior> team = new List<SurvivorBehavior>(missionTeamSelection);
-            team.RemoveAll(s => s == null || !s.IsAlive || s.IsOnMission);
-
-            if (team.Count == 0)
-            {
-                ShowNotification("Aucun survivant sélectionné — choisissez une équipe.");
-                return;
-            }
-
-            bool ok = gm.MissionSystem.LaunchMission(
-                MissionSystem.AvailableMissions[selectedMissionIndex],
-                team,
-                gm.ResourceManager.Resources,
-                missionProvisionFood,
-                missionProvisionWater);
-
-            if (ok)
-            {
-                string names = string.Join(", ", team.ConvertAll(s => s.SurvivorName));
-                ShowNotification($"Mission lancée — {names} — retour dans {MissionSystem.AvailableMissions[selectedMissionIndex].DurationDays}j");
-                missionTeamSelection.Clear();
-                selectedMissionIndex = -1;
-                CloseAllAndReturnToFPS();
-            }
-            else
-            {
-                ShowNotification("Provisions insuffisantes ou équipe invalide.");
-            }
-        }
-
-        private void OnMissionCompleted(MissionResult r)
-        {
-            // Apply resources to the shelter
-            if (r.Success)
-            {
-                gm.ResourceManager.AddResources(
-                    food: r.FoodGained, water: r.WaterGained,
-                    medicine: r.MedicineGained, materials: r.MaterialsGained);
-            }
-
-            missionResultPanel?.SetActive(true);
-            if (r.Success)
-            {
-                string team = string.Join(", ", r.Team.ConvertAll(s => s.SurvivorName));
-                string gains = "";
-                if (r.FoodGained    > 0) gains += $"  +{r.FoodGained} Nourriture\n";
-                if (r.WaterGained   > 0) gains += $"  +{r.WaterGained} Eau\n";
-                if (r.MedicineGained> 0) gains += $"  +{r.MedicineGained} Médicaments\n";
-                if (r.MaterialsGained>0) gains += $"  +{r.MaterialsGained} Matériaux\n";
-                SetText(missionResultText,
-                    $"✔ MISSION RÉUSSIE — {r.Definition.LocationName}\n" +
-                    $"Équipe : {team}\n\n" +
-                    $"Récupéré :\n{gains}");
-            }
-            else
-            {
-                string casualties = r.Casualties.Count > 0
-                    ? string.Join(", ", r.Casualties.ConvertAll(s => s.SurvivorName)) + " sont blessés."
-                    : "Aucune perte.";
-                SetText(missionResultText,
-                    $"✘ MISSION ÉCHOUÉE — {r.Definition.LocationName}\n\n{casualties}");
-            }
-            // Refresh sidebar if the camera wall is active
-            if (cameraWallPanel != null && cameraWallPanel.activeSelf)
-                PopulateFullSurvivorSidebar();
-        }
+        // ── Missions — REMOVED ────────────────────────────────────────────────────
 
         // ── Events ───────────────────────────────────────────────────────────────
 
         private void ShowEventPopup(ShelterEvent ev)
         {
             pendingEvent = ev;
-            eventPopupPanel?.SetActive(true);
+            SafeSetActive(eventPopupPanel, true);
             SetText(eventTitleText, $"! {ev.Title.ToUpper()}");
             SetText(eventDescriptionText, ev.Description);
 
             if (ev.Choices.Length > 0)
             {
-                eventChoice0Button?.gameObject.SetActive(true);
-                // Show label + consequence on two lines
+                if (eventChoice0Button != null) SafeSetActive(eventChoice0Button.gameObject, true);
                 SetText(eventChoice0Label, $"{ev.Choices[0].Label}\n<size=9><color=#88cc88>{ev.Choices[0].Tooltip}</color></size>");
             }
             if (ev.Choices.Length > 1)
             {
-                eventChoice1Button?.gameObject.SetActive(true);
+                if (eventChoice1Button != null) SafeSetActive(eventChoice1Button.gameObject, true);
                 SetText(eventChoice1Label, $"{ev.Choices[1].Label}\n<size=9><color=#88cc88>{ev.Choices[1].Tooltip}</color></size>");
             }
 
@@ -653,7 +479,7 @@ namespace ShelterCommand
             Cursor.visible = true;
             OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
             interact?.SetFPSLocked(true);
-            crosshair?.SetActive(false);
+            SafeSetActive(crosshair, false);
         }
 
         private void ResolveEvent(int choice)
@@ -662,28 +488,37 @@ namespace ShelterCommand
             gm.EventSystem.ResolveEvent(pendingEvent, choice, gm.SurvivorManager, gm.ResourceManager);
             ShowNotification($"Decision : {pendingEvent.Choices[choice].Label}");
             pendingEvent = null;
-            eventPopupPanel?.SetActive(false);
+            SafeSetActive(eventPopupPanel, false);
 
             // Restore FPS — cursor was released by ShowEventPopup
             OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
             interact?.SetFPSLocked(false);
-            crosshair?.SetActive(true);
+            SafeSetActive(crosshair, true);
         }
 
         // ── Utility ──────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Calls SetActive on a panel only if it is a live Unity object.
+        /// The C# null-conditional ?. bypasses Unity's == overload — a destroyed
+        /// GameObject is "fake-null" and still passes the ?. check, crashing on
+        /// the native side. This helper uses Unity's == comparison instead.
+        /// </summary>
+        private static void SafeSetActive(GameObject go, bool active)
+        {
+            if (go != null) go.SetActive(active);
+        }
+
         private void HideAllPanels()
         {
-            cameraWallPanel?.SetActive(false);
-            survivorSidebar?.SetActive(false);
-            orderPanel?.SetActive(false);
-            survivorDossierPanel?.SetActive(false);
-            missionMapPanel?.SetActive(false);
-            radioPanel?.SetActive(false);
-            eventPopupPanel?.SetActive(false);
-            missionResultPanel?.SetActive(false);
-            gameOverPanel?.SetActive(false);
-            gameWonPanel?.SetActive(false);
+            SafeSetActive(cameraWallPanel,      false);
+            SafeSetActive(survivorSidebar,      false);
+            SafeSetActive(orderPanel,           false);
+            SafeSetActive(survivorDossierPanel, false);
+            SafeSetActive(radioPanel,           false);
+            SafeSetActive(eventPopupPanel,      false);
+            SafeSetActive(gameOverPanel,        false);
+            SafeSetActive(gameWonPanel,         false);
         }
 
         private void ShowNotification(string message)

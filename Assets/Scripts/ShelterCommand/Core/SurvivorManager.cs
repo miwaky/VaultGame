@@ -5,13 +5,17 @@ using UnityEngine;
 namespace ShelterCommand
 {
     /// <summary>
-    /// Manages all survivors. Collects SurvivorBehavior components already present in the scene.
-    /// Does NOT spawn new survivors — the scene builder places them.
+    /// Manages all survivors. Spawns the starting roster at runtime as simple capsule proxies.
+    /// Placement is handled later — survivors are created at the origin of the Survivors root.
     /// </summary>
     public class SurvivorManager : MonoBehaviour
     {
-        [Header("Survivor Data Assets (assigned by index to scene survivors)")]
+        [Header("Survivor Data Assets (matched by name)")]
         [SerializeField] private List<SurvivorData> survivorDataList = new List<SurvivorData>();
+
+        [Header("Initializer (optional)")]
+        [Tooltip("Assign a SurvivorInitializer to use procedural generation. Leave empty to use the legacy capsule spawn.")]
+        [SerializeField] private SurvivorInitializer survivorInitializer;
 
         public event Action<SurvivorBehavior> OnSurvivorSelected;
         public event Action<SurvivorBehavior> OnSurvivorDied;
@@ -20,13 +24,26 @@ namespace ShelterCommand
         private readonly List<SurvivorBehavior> survivors = new List<SurvivorBehavior>();
         private SurvivorBehavior selectedSurvivor;
 
+        // Starting roster — 5 survivors + Steve
+        private static readonly string[] StartingNames =
+            { "Steve", "Aria", "Borek", "Chloé", "Daan", "Elsa" };
+
         public IReadOnlyList<SurvivorBehavior> Survivors => survivors;
         public SurvivorBehavior SelectedSurvivor => selectedSurvivor;
         public int AliveSurvivorCount => GetAliveSurvivors().Count;
 
         private void Start()
         {
-            CollectSurvivors();
+            if (survivorInitializer != null)
+            {
+                // Procedural path: SurvivorInitializer already ran its Start() — collect results.
+                // Use a delayed collect to ensure SurvivorInitializer.Start() has completed.
+                CollectFromInitializer();
+            }
+            else
+            {
+                SpawnStartingSurvivors();
+            }
         }
 
         // ── Public API ──────────────────────────────────────────────────────────
@@ -37,9 +54,7 @@ namespace ShelterCommand
             foreach (SurvivorBehavior survivor in survivors)
             {
                 if (survivor != null && survivor.IsAlive)
-                {
                     survivor.TickDay(resources);
-                }
             }
         }
 
@@ -73,16 +88,14 @@ namespace ShelterCommand
             foreach (SurvivorBehavior s in survivors)
             {
                 if (s != null && s.IsAlive && s.CurrentRoom == room)
-                {
                     result.Add(s);
-                }
             }
             return result;
         }
 
         /// <summary>
-        /// Registers a new survivor directly (from a mission rescue or scripted event).
-        /// The caller is responsible for creating and positioning the GameObject beforehand.
+        /// Registers an externally created survivor (e.g. rescue event).
+        /// The caller is responsible for creating and positioning the GameObject.
         /// </summary>
         public void AddSurvivor(SurvivorBehavior sb)
         {
@@ -104,28 +117,73 @@ namespace ShelterCommand
 
         // ── Private ─────────────────────────────────────────────────────────────
 
-        private void CollectSurvivors()
+        /// <summary>
+        /// Collects survivors created by SurvivorInitializer into this manager's list.
+        /// </summary>
+        private void CollectFromInitializer()
         {
-            GameObject survivorsRoot = GameObject.Find("Survivors");
-            SurvivorBehavior[] found;
-
-            if (survivorsRoot != null)
-                found = survivorsRoot.GetComponentsInChildren<SurvivorBehavior>(includeInactive: true);
-            else
-                found = FindObjectsByType<SurvivorBehavior>(FindObjectsSortMode.None);
-
-            survivors.Clear();
-            for (int i = 0; i < found.Length; i++)
+            foreach (SurvivorBehavior sb in survivorInitializer.SpawnedSurvivors)
             {
-                SurvivorBehavior sb = found[i];
-                if (sb.Data == null && i < survivorDataList.Count && survivorDataList[i] != null)
-                    sb.SetData(survivorDataList[i]);
+                if (sb == null) continue;
+                survivors.Add(sb);
+                RegisterSurvivorEvents(sb);
+            }
+            Debug.Log($"[SurvivorManager] {survivors.Count} survivants collectés depuis SurvivorInitializer.");
+            OnPopulationChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Spawns the 6 starting survivors as capsule GameObjects under a "Survivors" root.
+        /// Any pre-existing SurvivorBehavior in the scene is collected first to avoid duplicates.
+        /// Placement is intentionally left at world origin — positioning happens later.
+        /// </summary>
+        private void SpawnStartingSurvivors()
+        {
+            // Collect any survivors already in the scene (placed manually or by the scene builder)
+            SurvivorBehavior[] existing = FindObjectsByType<SurvivorBehavior>(FindObjectsSortMode.None);
+            HashSet<string> existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SurvivorBehavior sb in existing)
+            {
+                survivors.Add(sb);
+                RegisterSurvivorEvents(sb);
+                existingNames.Add(sb.gameObject.name);
+            }
+
+            // Find or create the Survivors root
+            GameObject survivorsRoot = GameObject.Find("Survivors");
+            if (survivorsRoot == null)
+            {
+                survivorsRoot = new GameObject("Survivors");
+            }
+
+            // Spawn only the survivors that are not yet present
+            for (int i = 0; i < StartingNames.Length; i++)
+            {
+                string survivorName = StartingNames[i];
+                if (existingNames.Contains(survivorName)) continue;
+
+                GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                go.name = survivorName;
+                go.transform.SetParent(survivorsRoot.transform);
+                go.transform.localPosition = new Vector3(i * 1.2f, 0f, 0f); // temp spread, placement TBD
+                go.transform.localScale = new Vector3(0.4f, 0.7f, 0.4f);
+                go.GetComponent<Renderer>().material =
+                    new Material(Shader.Find("Standard")) { color = Color.HSVToRGB(i / (float)StartingNames.Length, 0.5f, 0.75f) };
+
+                SurvivorBehavior sb = go.AddComponent<SurvivorBehavior>();
+
+                // Match a SurvivorData asset by name if available
+                SurvivorData matchedData = survivorDataList.Find(d =>
+                    d != null && string.Equals(d.survivorName, survivorName, StringComparison.OrdinalIgnoreCase));
+                if (matchedData != null)
+                    sb.SetData(matchedData);
 
                 survivors.Add(sb);
                 RegisterSurvivorEvents(sb);
             }
 
-            Debug.Log($"[SurvivorManager] Collected {survivors.Count} survivors.");
+            Debug.Log($"[SurvivorManager] {survivors.Count} survivants actifs.");
+            OnPopulationChanged?.Invoke();
         }
 
         private void RegisterSurvivorEvents(SurvivorBehavior sb)

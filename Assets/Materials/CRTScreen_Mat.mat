@@ -29,11 +29,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AnalogShift: 0.0010025833
-    - _CRTTime: 0.019999992
-    - _NoiseIntensity: 0.0050129164
+    - _AnalogShift: 0.001
+    - _CRTTime: 0
+    - _NoiseIntensity: 0.005
     - _ScanlineIntensity: 0.15
-    - _VignetteStrength: 0.02
+    - _VignetteStrength: 0.3
     m_Colors:
     - _TintColor: {r: 0.9, g: 1, b: 0.85, a: 1}
   m_BuildTextureStacks: []

@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Gwen
   age: 35
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 4
+  negativeTrait: 9
+  hasRelation: 1
   strength: 55
   intelligence: 75
   technical: 65

@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Iris
   age: 29
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 3
+  negativeTrait: 7
+  hasRelation: 1
   strength: 50
   intelligence: 85
   technical: 55

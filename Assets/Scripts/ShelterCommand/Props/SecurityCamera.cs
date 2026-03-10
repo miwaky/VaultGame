@@ -17,7 +17,7 @@ namespace ShelterCommand
         [SerializeField] private int autoTextureHeight = 288;
 
         /// <summary>Assigned automatically at discovery time — e.g. "CAM-01".</summary>
-        public string        CameraLabel   { get; internal set; } = "CAM-XX";
+        public string        CameraLabel   { get; set; } = "CAM-XX";
         public RenderTexture RenderTexture { get; private set; }
 
         private Camera cam;

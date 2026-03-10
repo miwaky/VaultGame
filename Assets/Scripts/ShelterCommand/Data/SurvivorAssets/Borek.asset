@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Borek
   age: 45
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 2
+  negativeTrait: 6
+  hasRelation: 0
   strength: 85
   intelligence: 40
   technical: 55

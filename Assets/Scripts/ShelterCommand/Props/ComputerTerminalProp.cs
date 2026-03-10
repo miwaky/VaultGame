@@ -17,10 +17,25 @@ namespace ShelterCommand
         private void Start()
         {
             hud = FindFirstObjectByType<ShelterHUD>();
+            if (hud == null)
+                Debug.LogError("[ComputerTerminalProp] ShelterHUD introuvable — " +
+                               "assure-toi que le Canvas HUD est présent et actif au démarrage.");
         }
 
         public void Interact(OfficeInteractionSystem interactionSystem)
         {
+            // Re-discover if null at Start (ex: Canvas activé en retard)
+            if (hud == null)
+            {
+                hud = FindFirstObjectByType<ShelterHUD>();
+                if (hud == null)
+                {
+                    Debug.LogError("[ComputerTerminalProp] ShelterHUD toujours introuvable — " +
+                                   "impossible d'ouvrir le terminal.");
+                    return;
+                }
+            }
+
             isHUDOpen = !isHUDOpen;
 
             if (isHUDOpen)
@@ -28,15 +43,17 @@ namespace ShelterCommand
                 interactionSystem.SetFPSLocked(true);
                 SecurityCamera[] cameras = FindObjectsByType<SecurityCamera>(FindObjectsSortMode.None);
 
-                // Auto-number labels: CAM-01, CAM-02, …
+                if (cameras.Length == 0)
+                    Debug.LogWarning("[ComputerTerminalProp] Aucune SecurityCamera trouvée dans la scène.");
+
                 for (int i = 0; i < cameras.Length; i++)
                     cameras[i].CameraLabel = $"CAM-{i + 1:D2}";
 
-                hud?.OpenCameraWall(cameras);
+                hud.OpenCameraWall(cameras);
             }
             else
             {
-                hud?.CloseAllAndReturnToFPS();
+                hud.CloseAllAndReturnToFPS();
                 isHUDOpen = false;
             }
 

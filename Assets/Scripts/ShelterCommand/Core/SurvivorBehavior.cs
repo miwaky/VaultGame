@@ -13,6 +13,9 @@ namespace ShelterCommand
         [Header("Survivor Profile")]
         [SerializeField] private SurvivorData data;
 
+        /// <summary>Fully generated profile (stats, profession, traits). Set by SurvivorInitializer.</summary>
+        public SurvivorGeneratedProfile GeneratedProfile { get; private set; }
+
         [Header("Starting Room")]
         [SerializeField] private ShelterRoomType startRoom = ShelterRoomType.Dormitory;
 
@@ -28,7 +31,8 @@ namespace ShelterCommand
 
         // ── Accessors ────────────────────────────────────────────────────────────
         public SurvivorData Data          => data;
-        public string SurvivorName        => data != null ? data.survivorName : gameObject.name;
+        public string SurvivorName        => GeneratedProfile != null ? GeneratedProfile.survivorName :
+                                             (data != null ? data.survivorName : gameObject.name);
         public int    Hunger              => hunger;
         public int    Fatigue             => fatigue;
         public int    Stress              => stress;
@@ -69,6 +73,15 @@ namespace ShelterCommand
 
         /// <summary>Assigns SurvivorData at runtime (called by SurvivorManager).</summary>
         public void SetData(SurvivorData survivorData) => data = survivorData;
+
+        /// <summary>Assigns the generated profile at runtime (called by SurvivorInitializer).</summary>
+        public void SetGeneratedProfile(SurvivorGeneratedProfile profile)
+        {
+            GeneratedProfile = profile;
+            // Keep the legacy data name in sync so existing HUD code still works.
+            if (data == null && profile != null)
+                gameObject.name = profile.survivorName;
+        }
 
         /// <summary>Registers world-space spawn points for a room so survivors can teleport to them.</summary>
         public static void RegisterRoomSpawns(ShelterRoomType room, Vector3[] positions)
@@ -120,7 +133,7 @@ namespace ShelterCommand
         public bool IssueOrder(OrderType order, ShelterResources resources)
         {
             if (!IsAlive || IsArrested || IsOnMission) return false;
-            if (Morale < RefuseOrderMoraleThreshold && data != null && data.loyalty < 40)
+            if (Morale < RefuseOrderMoraleThreshold && !HasHighLoyalty())
             {
                 ModifyStress(10);
                 return false;
@@ -204,6 +217,15 @@ namespace ShelterCommand
             IsAlive = false;
             OnSurvivorDied?.Invoke(this);
             Debug.Log($"[SurvivorBehavior] {SurvivorName} est mort.");
+        }
+
+        /// <summary>Returns true if this survivor has sufficient loyalty to follow orders under low morale.</summary>
+        private bool HasHighLoyalty()
+        {
+            if (GeneratedProfile != null)
+                return GeneratedProfile.positiveTrait == PositiveTrait.Loyal ||
+                       GeneratedProfile.GetStat(SurvivorStatIndex.Social) >= 60;
+            return data != null && data.loyalty >= 40;
         }
     }
 }

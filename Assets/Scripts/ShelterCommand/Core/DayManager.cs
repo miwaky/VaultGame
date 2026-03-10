@@ -12,7 +12,6 @@ namespace ShelterCommand
         [SerializeField] private SurvivorManager survivorManager;
         [SerializeField] private ShelterResourceManager resourceManager;
         [SerializeField] private ShelterEventSystem eventSystem;
-        [SerializeField] private MissionSystem missionSystem;
 
         [Header("Day Settings")]
         [SerializeField] private int startingDay = 1;
@@ -53,12 +52,6 @@ namespace ShelterCommand
 
             // Tick survivors
             survivorManager.TickDay(resourceManager.Resources);
-
-            // Tick active missions (day-based resolution)
-            missionSystem?.TickDay();
-
-            // Notify resource manager that survivors may have modified resources
-            // (resources modified in place; fire refresh)
 
             CurrentDay++;
 

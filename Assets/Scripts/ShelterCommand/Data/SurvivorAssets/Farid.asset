@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Farid
   age: 50
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 2
+  negativeTrait: 8
+  hasRelation: 0
   strength: 75
   intelligence: 65
   technical: 45

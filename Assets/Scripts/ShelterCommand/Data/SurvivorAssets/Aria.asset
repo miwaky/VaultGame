@@ -15,6 +15,10 @@ MonoBehaviour:
   survivorName: Aria
   age: 32
   portrait: {fileID: 0}
+  role: 0
+  positiveTrait: 4
+  negativeTrait: 5
+  hasRelation: 1
   strength: 70
   intelligence: 60
   technical: 50
