@@ -412,10 +412,10 @@ namespace ShelterCommand
 
         private static string RoomLabel(ShelterRoomType r) => r switch
         {
-            ShelterRoomType.Dormitory => "CAM-01  DORTOIR",
-            ShelterRoomType.Cafeteria => "CAM-02  CANTINE",
-            ShelterRoomType.Storage => "CAM-03  STOCKAGE",
-            ShelterRoomType.Entrance => "CAM-04  ENTREE",
+            ShelterRoomType.Dorm     => "CAM-01  DORTOIR",
+            ShelterRoomType.Hospital => "CAM-02  HÔPITAL",
+            ShelterRoomType.Factory  => "CAM-03  USINE",
+            ShelterRoomType.Restroom => "CAM-04  SALLE DE REPOS",
             _ => "CAM-???"
         };
 

@@ -322,16 +322,16 @@ namespace ShelterCommand.Editor
             string[] names = { "Aria","Borek","Chloé","Daan","Elsa","Farid","Gwen","Henk","Iris","Joël" };
             (GameObject room, ShelterRoomType type, Vector3 offset)[] slots =
             {
-                (dorm,    ShelterRoomType.Dormitory, new Vector3(-3,0.5f,-1)),
-                (dorm,    ShelterRoomType.Dormitory, new Vector3( 0,0.5f,-1)),
-                (dorm,    ShelterRoomType.Dormitory, new Vector3( 3,0.5f,-1)),
-                (cafet,   ShelterRoomType.Cafeteria, new Vector3(-2,0.5f, 0)),
-                (cafet,   ShelterRoomType.Cafeteria, new Vector3( 2,0.5f, 0)),
-                (storage, ShelterRoomType.Storage,   new Vector3(-2,0.5f, 0)),
-                (storage, ShelterRoomType.Storage,   new Vector3( 2,0.5f, 0)),
-                (entrance,ShelterRoomType.Entrance,  new Vector3(-2,0.5f, 1)),
-                (entrance,ShelterRoomType.Entrance,  new Vector3( 0,0.5f, 1)),
-                (dorm,    ShelterRoomType.Dormitory, new Vector3( 0,0.5f, 2)),
+                (dorm,    ShelterRoomType.Dorm,     new Vector3(-3,0.5f,-1)),
+                (dorm,    ShelterRoomType.Dorm,     new Vector3( 0,0.5f,-1)),
+                (dorm,    ShelterRoomType.Dorm,     new Vector3( 3,0.5f,-1)),
+                (cafet,   ShelterRoomType.Restroom, new Vector3(-2,0.5f, 0)),
+                (cafet,   ShelterRoomType.Restroom, new Vector3( 2,0.5f, 0)),
+                (storage, ShelterRoomType.Factory,  new Vector3(-2,0.5f, 0)),
+                (storage, ShelterRoomType.Factory,  new Vector3( 2,0.5f, 0)),
+                (entrance,ShelterRoomType.Hospital, new Vector3(-2,0.5f, 1)),
+                (entrance,ShelterRoomType.Hospital, new Vector3( 0,0.5f, 1)),
+                (dorm,    ShelterRoomType.Dorm,     new Vector3( 0,0.5f, 2)),
             };
 
             for (int i = 0; i < names.Length; i++)
@@ -393,10 +393,10 @@ namespace ShelterCommand.Editor
                 SerializedObject crcSO = new SerializedObject(crc);
                 SerializedProperty rcp = crcSO.FindProperty("roomCameras");
                 rcp.arraySize = 4;
-                SetRoomCam(rcp, 0, ShelterRoomType.Dormitory, dormCam,    dormRT);
-                SetRoomCam(rcp, 1, ShelterRoomType.Cafeteria, cafetCam,   cafetRT);
-                SetRoomCam(rcp, 2, ShelterRoomType.Storage,   storageCam, storageRT);
-                SetRoomCam(rcp, 3, ShelterRoomType.Entrance,  entCam,     entRT);
+                SetRoomCam(rcp, 0, ShelterRoomType.Dorm,     dormCam,    dormRT);
+                SetRoomCam(rcp, 1, ShelterRoomType.Restroom, cafetCam,   cafetRT);
+                SetRoomCam(rcp, 2, ShelterRoomType.Factory,  storageCam, storageRT);
+                SetRoomCam(rcp, 3, ShelterRoomType.Hospital, entCam,     entRT);
                 crcSO.ApplyModifiedProperties();
             }
 
@@ -451,10 +451,10 @@ namespace ShelterCommand.Editor
             SerializedObject regSO = new SerializedObject(reg);
             SerializedProperty slots = regSO.FindProperty("roomSlots");
             slots.arraySize = 4;
-            SetSpawnSlot(slots, 0, ShelterRoomType.Dormitory, ds);
-            SetSpawnSlot(slots, 1, ShelterRoomType.Cafeteria,  cs);
-            SetSpawnSlot(slots, 2, ShelterRoomType.Storage,    ss);
-            SetSpawnSlot(slots, 3, ShelterRoomType.Entrance,   es);
+            SetSpawnSlot(slots, 0, ShelterRoomType.Dorm,     ds);
+            SetSpawnSlot(slots, 1, ShelterRoomType.Restroom, cs);
+            SetSpawnSlot(slots, 2, ShelterRoomType.Factory,  ss);
+            SetSpawnSlot(slots, 3, ShelterRoomType.Hospital, es);
             regSO.ApplyModifiedProperties();
         }
 

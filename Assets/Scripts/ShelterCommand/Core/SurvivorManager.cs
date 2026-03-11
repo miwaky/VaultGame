@@ -36,8 +36,8 @@ namespace ShelterCommand
         {
             if (survivorInitializer != null)
             {
-                // Procedural path: SurvivorInitializer already ran its Start() — collect results.
-                // Use a delayed collect to ensure SurvivorInitializer.Start() has completed.
+                // SurvivorInitializer is the sole authority — always spawn fresh.
+                survivorInitializer.SpawnAll();
                 CollectFromInitializer();
             }
             else
@@ -81,8 +81,8 @@ namespace ShelterCommand
             return accepted;
         }
 
-        /// <summary>Returns all alive survivors in a specific room.</summary>
-        public List<SurvivorBehavior> GetSurvivorsInRoom(ShelterRoomType room)
+        /// <summary>Returns all alive survivors in a specific room (matched by ShelterRoom reference).</summary>
+        public List<SurvivorBehavior> GetSurvivorsInRoom(ShelterRoom room)
         {
             List<SurvivorBehavior> result = new List<SurvivorBehavior>();
             foreach (SurvivorBehavior s in survivors)
@@ -139,24 +139,16 @@ namespace ShelterCommand
         /// </summary>
         private void SpawnStartingSurvivors()
         {
-            // Collect any survivors already in the scene (placed manually or by the scene builder)
-            SurvivorBehavior[] existing = FindObjectsByType<SurvivorBehavior>(FindObjectsSortMode.None);
-            HashSet<string> existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (SurvivorBehavior sb in existing)
-            {
-                survivors.Add(sb);
-                RegisterSurvivorEvents(sb);
-                existingNames.Add(sb.gameObject.name);
-            }
-
             // Find or create the Survivors root
             GameObject survivorsRoot = GameObject.Find("Survivors");
             if (survivorsRoot == null)
-            {
                 survivorsRoot = new GameObject("Survivors");
-            }
 
             // Spawn only the survivors that are not yet present
+            HashSet<string> existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (SurvivorBehavior sb in survivors)
+                existingNames.Add(sb.gameObject.name);
+
             for (int i = 0; i < StartingNames.Length; i++)
             {
                 string survivorName = StartingNames[i];
@@ -165,18 +157,17 @@ namespace ShelterCommand
                 GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
                 go.name = survivorName;
                 go.transform.SetParent(survivorsRoot.transform);
-                go.transform.localPosition = new Vector3(i * 1.2f, 0f, 0f); // temp spread, placement TBD
+                go.transform.localPosition = new Vector3(i * 1.2f, 0f, 0f);
                 go.transform.localScale = new Vector3(0.4f, 0.7f, 0.4f);
                 go.GetComponent<Renderer>().material =
                     new Material(Shader.Find("Standard")) { color = Color.HSVToRGB(i / (float)StartingNames.Length, 0.5f, 0.75f) };
 
                 SurvivorBehavior sb = go.AddComponent<SurvivorBehavior>();
 
-                // Match a SurvivorData asset by name if available
-                SurvivorData matchedData = survivorDataList.Find(d =>
-                    d != null && string.Equals(d.survivorName, survivorName, StringComparison.OrdinalIgnoreCase));
-                if (matchedData != null)
-                    sb.SetData(matchedData);
+                // Generate a minimal profile so the survivor has a name
+                SurvivorGeneratedProfile profile = SurvivorProfileGenerator.Generate();
+                profile.survivorName = survivorName;
+                sb.SetProfile(profile);
 
                 survivors.Add(sb);
                 RegisterSurvivorEvents(sb);

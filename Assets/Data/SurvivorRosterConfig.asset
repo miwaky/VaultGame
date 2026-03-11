@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b46a2b9efdc15145a373d91362dea87, type: 3}
+  m_Name: SurvivorRosterConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.SurvivorRosterConfig
+  survivors:
+  - name: Jules Girard
+    age: 44
+    profession: "Infirmier(\xE8re)"
+    positiveTrait: "Strat\xE8ge"
+    negativeTrait: Kleptomane
+    force: 47
+    intelligence: 31
+    technique: 9
+    social: 17
+    endurance: 62
+    totalStats: 166
+    presentationText: "Ancien(ne) infirmier(\xE8re). Regard pos\xE9.\nStrat\xE8ge
+      mais kleptomane."
+  - name: "No\xE9mie Dupont"
+    age: 32
+    profession: Ouvrier BTP
+    positiveTrait: Calme
+    negativeTrait: Pessimiste
+    force: 29
+    intelligence: 30
+    technique: 17
+    social: 5
+    endurance: 75
+    totalStats: 156
+    presentationText: 'Ex-ouvrier btp. Les yeux inquiets.
+
+      Calme mais pessimiste.'
+  - name: Camille Bernard
+    age: 56
+    profession: Militaire
+    positiveTrait: Courageux
+    negativeTrait: Pessimiste
+    force: 24
+    intelligence: 19
+    technique: 66
+    social: 5
+    endurance: 18
+    totalStats: 132
+    presentationText: "Une vie d'exp\xE9rience. militaire. Les yeux inquiets.\nCourageux
+      mais pessimiste."
+  - name: Marie Michel
+    age: 68
+    profession: Universitaire
+    positiveTrait: Loyal
+    negativeTrait: Kleptomane
+    force: 12
+    intelligence: 92
+    technique: 5
+    social: 5
+    endurance: 32
+    totalStats: 146
+    presentationText: "V\xE9t\xE9ran(e). universitaire. Regard pos\xE9.\nLoyal mais
+      kleptomane."
+  - name: "In\xE8s Moreau"
+    age: 39
+    profession: "Cuisinier(\xE8re)"
+    positiveTrait: Calme
+    negativeTrait: Paresseux
+    force: 5
+    intelligence: 21
+    technique: 53
+    social: 19
+    endurance: 44
+    totalStats: 142
+    presentationText: "Ex-cuisinier(\xE8re). Para\xEEt \xE9puis\xE9(e).\nCalme mais
+      paresseux."
+  - name: Sarah Michel
+    age: 53
+    profession: Universitaire
+    positiveTrait: Courageux
+    negativeTrait: Fragile
+    force: 81
+    intelligence: 31
+    technique: 8
+    social: 6
+    endurance: 26
+    totalStats: 152
+    presentationText: 'Ancien(ne) universitaire. Des cernes profondes.
+
+      Courageux
+      mais fragile.'

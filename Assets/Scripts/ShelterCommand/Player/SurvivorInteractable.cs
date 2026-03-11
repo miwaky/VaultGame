@@ -20,11 +20,15 @@ namespace ShelterCommand
         {
             if (SurvivorInteractionUI.Instance == null)
             {
-                Debug.LogWarning("[SurvivorInteractable] SurvivorInteractionUI introuvable dans la scène.");
+                Debug.LogError("[SurvivorInteractable] SurvivorInteractionUI introuvable — " +
+                               "ajoute le composant sur le Canvas HUD et assigne le champ 'Panel'.");
                 return;
             }
 
             SurvivorInteractionUI.Instance.Show(survivorBehavior);
+
+            // Lock FPS movement while the UI panel is open
+            interactionSystem.SetFPSLocked(true);
         }
 
         // ── Private ───────────────────────────────────────────────────────────────
