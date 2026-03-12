@@ -143,12 +143,42 @@ namespace ShelterCommand
         {
             if (room == null || IsOnMission) return;
             CurrentRoom = room;
+
+            // Stop any ongoing idle movement so it doesn't overwrite our destination
+            SurvivorIdleMovement idle = GetComponent<SurvivorIdleMovement>();
+            if (idle != null) idle.enabled = false;
+
             NavMeshAgent agent = GetComponent<NavMeshAgent>();
             Vector3 target = room.GetRandomSpawnPoint();
-            if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
-                agent.SetDestination(target);
+
+            if (agent != null && agent.isActiveAndEnabled)
+            {
+                agent.isStopped      = false;
+                agent.updatePosition = true;
+                agent.updateRotation = true;
+
+                if (agent.isOnNavMesh)
+                {
+                    agent.SetDestination(target);
+                }
+                else
+                {
+                    if (UnityEngine.AI.NavMesh.SamplePosition(target, out UnityEngine.AI.NavMeshHit hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+                    {
+                        agent.Warp(hit.position);
+                        agent.SetDestination(hit.position);
+                    }
+                    else
+                    {
+                        transform.position = target;
+                    }
+                }
+            }
             else
+            {
                 transform.position = target;
+                Debug.LogWarning($"[SurvivorBehavior] {SurvivorName} : pas de NavMeshAgent actif — téléportation.");
+            }
         }
 
         public void Arrest()   { IsArrested = true;  Add(ref stress, 20); OnNeedsChanged?.Invoke(this); }
@@ -180,7 +210,7 @@ namespace ShelterCommand
             switch (CurrentOrder)
             {
                 case OrderType.GoEat:
-                    if (resources.food > 0) { resources.food = Mathf.Max(0, resources.food - 5); Add(ref hunger, -30); }
+                    if (resources.food > 0) { resources.food = Mathf.Max(0f, resources.food - 5f); Add(ref hunger, -30); }
                     break;
                 case OrderType.GoSleep:
                     Add(ref fatigue, -25); Add(ref stress, -5);
@@ -210,7 +240,7 @@ namespace ShelterCommand
         private void ApplyLowMoraleEffect(ShelterResources resources)
         {
             int roll = UnityEngine.Random.Range(0, 100);
-            if (roll < 20) { resources.food = Mathf.Max(0, resources.food - UnityEngine.Random.Range(5, 15)); Add(ref hunger, -20); }
+            if (roll < 20) { resources.food = Mathf.Max(0f, resources.food - UnityEngine.Random.Range(5f, 15f)); Add(ref hunger, -20); }
             else if (roll < 35) Add(ref stress, 10);
         }
 

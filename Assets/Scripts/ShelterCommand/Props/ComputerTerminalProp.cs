@@ -3,64 +3,64 @@ using UnityEngine;
 namespace ShelterCommand
 {
     /// <summary>
-    /// The office computer terminal. Cycles through all SecurityCamera instances in the scene.
-    /// Pressing E opens/closes the terminal. Inside the terminal, Prev/Next navigate cameras.
+    /// The office computer terminal prop.
+    /// Pressing E opens/closes the ComputerMenuController software interface.
+    /// The menu controller handles FPS locking, cursor management, and panel navigation.
     /// </summary>
     public class ComputerTerminalProp : MonoBehaviour, IInteractable
     {
-        public string PromptLabel => isHUDOpen ? "Fermer le terminal" : "Ouvrir la surveillance";
+        public string PromptLabel    => isMenuOpen ? "Fermer le terminal" : "Ouvrir l'ordinateur";
         public bool   IsInteractable => true;
 
-        private bool isHUDOpen;
-        private ShelterHUD hud;
+        [Tooltip("Reference to the ComputerMenuController on the computer UI Canvas.")]
+        [SerializeField] private ComputerMenuController menuController;
+
+        private bool isMenuOpen;
 
         private void Start()
         {
-            hud = FindFirstObjectByType<ShelterHUD>();
-            if (hud == null)
-                Debug.LogError("[ComputerTerminalProp] ShelterHUD introuvable — " +
-                               "assure-toi que le Canvas HUD est présent et actif au démarrage.");
+            if (menuController == null)
+                menuController = FindFirstObjectByType<ComputerMenuController>();
+
+            if (menuController == null)
+                Debug.LogError("[ComputerTerminalProp] ComputerMenuController introuvable — " +
+                               "assure-toi que le Canvas ordinateur est présent dans la scène.");
         }
 
+        /// <summary>Called by OfficeInteractionSystem when the player presses E.</summary>
         public void Interact(OfficeInteractionSystem interactionSystem)
         {
-            // Re-discover if null at Start (ex: Canvas activé en retard)
-            if (hud == null)
+            if (menuController == null)
             {
-                hud = FindFirstObjectByType<ShelterHUD>();
-                if (hud == null)
+                menuController = FindFirstObjectByType<ComputerMenuController>();
+                if (menuController == null)
                 {
-                    Debug.LogError("[ComputerTerminalProp] ShelterHUD toujours introuvable — " +
-                                   "impossible d'ouvrir le terminal.");
+                    Debug.LogError("[ComputerTerminalProp] ComputerMenuController toujours introuvable.");
                     return;
                 }
             }
 
-            isHUDOpen = !isHUDOpen;
-
-            if (isHUDOpen)
+            if (isMenuOpen)
             {
-                interactionSystem.SetFPSLocked(true);
-                SecurityCamera[] cameras = FindObjectsByType<SecurityCamera>(FindObjectsSortMode.None);
-
-                if (cameras.Length == 0)
-                    Debug.LogWarning("[ComputerTerminalProp] Aucune SecurityCamera trouvée dans la scène.");
-
-                for (int i = 0; i < cameras.Length; i++)
-                    cameras[i].CameraLabel = $"CAM-{i + 1:D2}";
-
-                hud.OpenCameraWall(cameras);
+                menuController.Close();
             }
             else
             {
-                hud.CloseAllAndReturnToFPS();
-                isHUDOpen = false;
+                isMenuOpen = true;
+                menuController.Open(interactionSystem, OnMenuQuit);
+                Debug.Log("[ComputerTerminalProp] Terminal ouvert.");
             }
-
-            Debug.Log($"[ComputerTerminalProp] Terminal {(isHUDOpen ? "ouvert" : "ferme")}.");
         }
 
-        /// <summary>Called by ShelterHUD when the player exits the terminal from within the UI.</summary>
-        public void NotifyTerminalClosed() => isHUDOpen = false;
+        /// <summary>Called by ComputerMenuController or ShelterHUD when the terminal is closed from within the UI.</summary>
+        public void NotifyTerminalClosed() => isMenuOpen = false;
+
+        // ── Private ─────────────────────────────────────────────────────────────
+
+        private void OnMenuQuit()
+        {
+            isMenuOpen = false;
+            Debug.Log("[ComputerTerminalProp] Menu fermé par le joueur.");
+        }
     }
 }

@@ -27,8 +27,9 @@ namespace ShelterCommand
 
             SurvivorInteractionUI.Instance.Show(survivorBehavior);
 
-            // Lock FPS movement while the UI panel is open
+            // Lock FPS movement and hide crosshair while the dialogue is open
             interactionSystem.SetFPSLocked(true);
+            FindFirstObjectByType<ShelterHUD>()?.SetCrosshairVisible(false);
         }
 
         // ── Private ───────────────────────────────────────────────────────────────

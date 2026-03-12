@@ -46,9 +46,9 @@ namespace ShelterCommand
 
             OnDayEnded?.Invoke(CurrentDay);
 
-            // Apply daily resource consumption
-            int aliveCount = survivorManager.AliveSurvivorCount;
-            resourceManager.ApplyDailyConsumption(aliveCount);
+            // Food and Water consumption is now handled at midnight by HourlyProductionManager.
+            // Only non-food/water resources (energy, etc.) are consumed here.
+            resourceManager.Resources.energy = Mathf.Max(0, resourceManager.Resources.energy - 5);
 
             // Tick survivors
             survivorManager.TickDay(resourceManager.Resources);

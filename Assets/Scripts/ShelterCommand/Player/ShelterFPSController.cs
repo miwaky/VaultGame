@@ -20,6 +20,7 @@ namespace ShelterCommand
 
         [Header("Move Settings")]
         [SerializeField] private float moveSpeed = 2.5f;
+        [SerializeField] private float sprintSpeed = 5f;
         [SerializeField] private float gravity = -9.81f;
 
         private CharacterController characterController;
@@ -48,12 +49,13 @@ namespace ShelterCommand
 
         // ── Public API ───────────────────────────────────────────────────────────
 
-        /// <summary>Locks or unlocks player controls and cursor state.</summary>
+        /// <summary>
+        /// Locks or unlocks player input (look + move).
+        /// Does NOT change cursor visibility — callers handle that themselves.
+        /// </summary>
         public void SetLocked(bool locked)
         {
             isLocked = locked;
-            Cursor.lockState = locked ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = locked;
         }
 
         public bool IsLocked => isLocked;
@@ -96,13 +98,16 @@ namespace ShelterCommand
                     move += transform.right;
             }
 
-            // Gravity
-            if (characterController.isGrounded && verticalVelocity < 0f)
+            // Gravity — clamp prevents accumulation from external physics disturbances
+            if (characterController.isGrounded)
                 verticalVelocity = -2f;
             else
-                verticalVelocity += gravity * Time.deltaTime;
+                verticalVelocity = Mathf.Max(verticalVelocity + gravity * Time.deltaTime, gravity);
 
-            move = move.normalized * moveSpeed;
+            bool isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+            float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
+
+            move = move.normalized * currentSpeed;
             move.y = verticalVelocity;
             characterController.Move(move * Time.deltaTime);
         }

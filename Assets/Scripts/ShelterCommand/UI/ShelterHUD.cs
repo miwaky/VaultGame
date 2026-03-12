@@ -138,7 +138,15 @@ namespace ShelterCommand
         {
             TickNotification();
             if (UnityEngine.InputSystem.Keyboard.current?.escapeKey.wasPressedThisFrame == true)
-                CloseAllAndReturnToFPS();
+            {
+                // If the computer terminal canvas is open, delegate to its Close() so all panels
+                // are properly hidden and state is fully reset — prevents the black-screen bug.
+                ComputerMenuController terminal = FindFirstObjectByType<ComputerMenuController>();
+                if (terminal != null && terminal.gameObject.activeSelf)
+                    terminal.Close();
+                else
+                    CloseAllAndReturnToFPS();
+            }
         }
 
         // ── Event subscriptions ─────────────────────────────────────────────────
@@ -162,9 +170,30 @@ namespace ShelterCommand
 
         // ── Button setup ────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Handles the Close button on the CameraWallPanel.
+        /// If the terminal is open, returns to the ComputerMenuController main menu.
+        /// Otherwise performs a full FPS return.
+        /// </summary>
+        private void OnCloseCameraWall()
+        {
+            ComputerMenuController menu = FindFirstObjectByType<ComputerMenuController>();
+            if (menu != null && menu.gameObject.activeSelf)
+            {
+                // Coming from the terminal — hide the HUD camera wall and go back to main menu.
+                SafeSetActive(cameraWallPanel, false);
+                SafeSetActive(survivorSidebar, false);
+                menu.ShowMainMenu();
+            }
+            else
+            {
+                CloseAllAndReturnToFPS();
+            }
+        }
+
         private void SetupButtons()
         {
-            closeCameraWallButton?.onClick.AddListener(CloseAllAndReturnToFPS);
+            closeCameraWallButton?.onClick.AddListener(OnCloseCameraWall);
             openDossierButton?.onClick.AddListener(ShowDossier);
 
             camPrevButton?.onClick.AddListener(CycleCameraPrev);
@@ -200,11 +229,15 @@ namespace ShelterCommand
 
         // ── Public API — called by props ─────────────────────────────────────────
 
+        /// <summary>Shows or hides the FPS crosshair. Called by ComputerMenuController.</summary>
+        public void SetCrosshairVisible(bool visible) => SafeSetActive(crosshair, visible);
+
         /// <summary>
         /// Opens the camera terminal with the provided list of SecurityCameras.
-        /// Shows the first camera immediately; sidebar hidden until camera is active.
+        /// When <paramref name="fromTerminal"/> is true the survivor sidebar,
+        /// dossier button, and mission button are hidden (terminal has its own panels).
         /// </summary>
-        public void OpenCameraWall(SecurityCamera[] cameras)
+        public void OpenCameraWall(SecurityCamera[] cameras, bool fromTerminal = false)
         {
             HideAllPanels();
             availableCameras   = cameras ?? new SecurityCamera[0];
@@ -215,8 +248,12 @@ namespace ShelterCommand
             SafeSetActive(survivorSidebar,  false);
             SafeSetActive(orderPanel,       false);
 
+            // Hide sidebar-related actions when opened from the computer terminal
+            if (openDossierButton  != null) openDossierButton.gameObject.SetActive(!fromTerminal);
+            if (openMissionMapButton != null) openMissionMapButton.gameObject.SetActive(false); // always hidden
+
             if (availableCameras.Length > 0)
-                ShowCamera(0);
+                ShowCamera(0, fromTerminal);
         }
 
         /// <summary>Legacy overload — auto-discovers all SecurityCameras in the scene.</summary>
@@ -227,7 +264,7 @@ namespace ShelterCommand
 
         // ── Camera cycling ────────────────────────────────────────────────────────
 
-        private void ShowCamera(int index)
+        private void ShowCamera(int index, bool sidebarHidden = false)
         {
             if (availableCameras == null || availableCameras.Length == 0) return;
             index = Mathf.Clamp(index, 0, availableCameras.Length - 1);
@@ -238,24 +275,27 @@ namespace ShelterCommand
                 cameraFeedImage.texture = cam.RenderTexture;
             SetText(cameraLabelText, $"{cam.CameraLabel}   [{index + 1} / {availableCameras.Length}]");
 
-            SafeSetActive(survivorSidebar, true);
-            PopulateFullSurvivorSidebar();
+            if (!sidebarHidden)
+            {
+                SafeSetActive(survivorSidebar, true);
+                PopulateFullSurvivorSidebar();
+            }
             SafeSetActive(orderPanel, false);
         }
 
         private void CycleCameraNext()
         {
             if (availableCameras == null || availableCameras.Length == 0) return;
-            // Circular: wraps from last → first
-            ShowCamera((currentCameraIndex + 1) % availableCameras.Length);
+            bool sidebar = survivorSidebar != null && survivorSidebar.activeSelf;
+            ShowCamera((currentCameraIndex + 1) % availableCameras.Length, !sidebar);
         }
 
         private void CycleCameraPrev()
         {
             if (availableCameras == null || availableCameras.Length == 0) return;
-            // Circular: wraps from first → last
+            bool sidebar = survivorSidebar != null && survivorSidebar.activeSelf;
             int prev = (currentCameraIndex - 1 + availableCameras.Length) % availableCameras.Length;
-            ShowCamera(prev);
+            ShowCamera(prev, !sidebar);
         }
 
         /// <summary>Opens mission map (called by MissionMapProp or bottom bar).</summary>
@@ -340,14 +380,16 @@ namespace ShelterCommand
         {
             if (pendingEvent != null) { ShowNotification("Resolvez l'evenement avant de continuer."); return; }
 
-            // Only deselect the room camera if one was actually selected (full-screen mode).
-            // When coming from the PC terminal there is no active room — skipping avoids
-            // accidentally disabling the full-screen camera (or the player camera if mis-assigned).
             if (gm.CameraRoomController.IsInFullScreen)
                 gm.CameraRoomController.DeselectRoom();
 
             HideAllPanels();
             SafeSetActive(crosshair, true);
+
+            // Restore FPS cursor state
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible   = false;
+
             OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
             interact?.SetFPSLocked(false);
             FindFirstObjectByType<ComputerTerminalProp>()?.NotifyTerminalClosed();
@@ -388,13 +430,14 @@ namespace ShelterCommand
         {
             if (gm == null) return;
             ShelterResourceManager rm = gm.ResourceManager;
-            SetText(foodText, $"NOURR. {rm.Food}");
-            SetText(waterText, $"EAU {rm.Water}");
-            SetText(medicineText, $"MED. {rm.Medicine}");
+            // Food and Water are float — display as integer for readability
+            SetText(foodText,      $"NOURR. {rm.FoodInt}");
+            SetText(waterText,     $"EAU {rm.WaterInt}");
+            SetText(medicineText,  $"MED. {rm.Medicine}");
             SetText(materialsText, $"MAT. {rm.Materials}");
-            SetText(energyText, $"ENRG. {rm.Energy}%");
-            SetText(dayText, $"JOUR {gm.DayManager.CurrentDay}");
-            SetText(populationText, $"POP. {gm.SurvivorManager.AliveSurvivorCount}");
+            SetText(energyText,    $"ENRG. {rm.Energy}%");
+            SetText(dayText,       $"JOUR {gm.DayManager.CurrentDay}");
+            SetText(populationText,$"POP. {gm.SurvivorManager.AliveSurvivorCount}");
         }
 
         // ── Camera wall ──────────────────────────────────────────────────────────

@@ -35,8 +35,13 @@ namespace ShelterCommand
         [Tooltip("Référence à OfficeInteractionSystem pour unlock le joueur à la fermeture.")]
         [SerializeField] private OfficeInteractionSystem interactionSystem;
 
+        private ShelterHUD shelterHUD;
+
         // ── Singleton ─────────────────────────────────────────────────────────────
         public static SurvivorInteractionUI Instance { get; private set; }
+
+        /// <summary>True when the dialogue panel is currently shown.</summary>
+        public bool IsVisible => panel != null && panel.activeSelf;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -58,18 +63,18 @@ namespace ShelterCommand
             if (interactionSystem == null)
                 interactionSystem = FindFirstObjectByType<OfficeInteractionSystem>();
 
+            shelterHUD = FindFirstObjectByType<ShelterHUD>();
+
             closeButton?.onClick.AddListener(Hide);
             Hide();
         }
 
         private void Update()
         {
-            // Allow closing with Escape or E when the panel is visible
+            // Close dialogue with E — Escape intentionally excluded to avoid closing the terminal
             if (panel != null && panel.activeSelf)
             {
-                if (Keyboard.current != null &&
-                    (Keyboard.current.escapeKey.wasPressedThisFrame ||
-                     Keyboard.current.eKey.wasPressedThisFrame))
+                if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
                 {
                     Hide();
                 }
@@ -116,11 +121,12 @@ namespace ShelterCommand
             SafeSetActive(panel, true);
         }
 
-        /// <summary>Cache le panel et déverrouille le FPS controller.</summary>
+        /// <summary>Cache le panel, déverrouille le FPS controller et restaure le crosshair.</summary>
         public void Hide()
         {
             SafeSetActive(panel, false);
             interactionSystem?.SetFPSLocked(false);
+            shelterHUD?.SetCrosshairVisible(true);
         }
 
         // ── Fallback UI builder ───────────────────────────────────────────────────

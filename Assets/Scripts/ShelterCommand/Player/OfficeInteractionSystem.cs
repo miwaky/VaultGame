@@ -23,16 +23,19 @@ namespace ShelterCommand
         [SerializeField] private TextMeshProUGUI promptText;
 
         private IInteractable currentTarget;
+        private ItemCarrySystem carrySystem;
 
         // ── Debug ────────────────────────────────────────────────────────────────
         [Header("Debug")]
-        [SerializeField] private bool debugMode = true;  // désactive en prod
+        [SerializeField] private bool debugMode = true;
 
         private float debugLogCooldown;
-        private const float DebugLogInterval = 0.5f;  // log toutes les 0.5s max pour ne pas spammer
+        private const float DebugLogInterval = 0.5f;
 
         private void Start()
         {
+            carrySystem = GetComponent<ItemCarrySystem>() ?? GetComponentInParent<ItemCarrySystem>();
+
             if (playerCamera == null)
                 Debug.LogError("[Interaction] playerCamera NON assignée sur " + gameObject.name);
             else
@@ -49,7 +52,13 @@ namespace ShelterCommand
         {
             ScanForInteractable();
 
-            if (currentTarget != null && Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
+            if (Keyboard.current == null) return;
+
+            // Do not trigger new interactions while the survivor dialogue is open
+            if (SurvivorInteractionUI.Instance != null && SurvivorInteractionUI.Instance.IsVisible)
+                return;
+
+            if (currentTarget != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
                 Debug.Log($"[Interaction] E pressé → Interact() sur '{(currentTarget as MonoBehaviour)?.gameObject.name}'");
                 currentTarget.Interact(this);
@@ -76,6 +85,7 @@ namespace ShelterCommand
             {
                 SetPrompt(false, "");
                 currentTarget = null;
+                carrySystem?.SetActiveShelf(null);
                 return;
             }
 
@@ -84,27 +94,15 @@ namespace ShelterCommand
 
             bool shouldLog = debugMode && Time.time > debugLogCooldown;
 
-            if (Physics.Raycast(ray, out RaycastHit hit, interactionDistance, effectiveMask))
-            {
-                if (shouldLog)
-                {
-                    debugLogCooldown = Time.time + DebugLogInterval;
-                    Debug.Log($"[Interaction] Raycast touche : '{hit.collider.gameObject.name}' " +
-                              $"| layer = '{LayerMask.LayerToName(hit.collider.gameObject.layer)}' " +
-                              $"| distance = {hit.distance:F2}m");
-                }
+            // RaycastAll so that a cardboard box sitting behind a shelf mesh is still reachable.
+            // We walk hits sorted by distance and take the first one that has an IInteractable.
+            RaycastHit[] hits = Physics.RaycastAll(ray, interactionDistance, effectiveMask);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
-                IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
-                if (interactable != null && interactable.IsInteractable)
-                {
-                    currentTarget = interactable;
-                    SetPrompt(true, $"[E] {interactable.PromptLabel}");
-                    return;
-                }
-                else if (shouldLog)
-                {
-                    Debug.LogWarning($"[Interaction] '{hit.collider.gameObject.name}' touché MAIS pas d'IInteractable trouvé sur lui ou ses parents.");
-                }
+            if (shouldLog && hits.Length > 0)
+            {
+                debugLogCooldown = Time.time + DebugLogInterval;
+                Debug.Log($"[Interaction] RaycastAll : {hits.Length} hit(s) — premier='{hits[0].collider.gameObject.name}' à {hits[0].distance:F2}m");
             }
             else if (shouldLog)
             {
@@ -112,7 +110,36 @@ namespace ShelterCommand
                 Debug.Log($"[Interaction] Aucun hit — ray depuis {ray.origin:F2} direction {ray.direction:F2} | masque = {effectiveMask}");
             }
 
+            foreach (RaycastHit hit in hits)
+            {
+                IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
+                if (interactable == null || !interactable.IsInteractable) continue;
+
+                currentTarget = interactable;
+
+                // Notify carry system when a shelf is in range (for hold-E box stocking)
+                StorageShelf shelf = interactable as StorageShelf;
+                carrySystem?.SetActiveShelf(shelf);
+
+                string prompt;
+                if (shelf != null && carrySystem != null && carrySystem.IsCarryingBox)
+                {
+                    CardboardBox box = carrySystem.CarriedBox;
+                    prompt = box.IsEmpty
+                        ? "[E] Carton vide"
+                        : $"[E] Déposer {box.ItemCount} objet(s) sur l'étagère";
+                }
+                else
+                {
+                    prompt = interactable.PromptLabel;
+                }
+
+                SetPrompt(true, prompt);
+                return;
+            }
+
             currentTarget = null;
+            carrySystem?.SetActiveShelf(null);
             SetPrompt(false, "");
         }
 
