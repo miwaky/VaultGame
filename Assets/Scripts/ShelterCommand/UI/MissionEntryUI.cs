@@ -1,60 +1,119 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 namespace ShelterCommand
 {
     /// <summary>
-    /// Displays a single active exploration mission inside the ExplorationPanelUI.
+    /// One row in the EN EXPLORATION list.
     ///
-    /// Visual layout (horizontal bar):
-    ///   [Destination]  [Survivants]  [Progression]  [Ressources]
+    /// Two modes:
+    ///   • Active  — <see cref="BindActiveMission"/> : "Déplacement vers ZONE" (white, Rappeler visible)
+    ///   • Pending — <see cref="BindPending"/>       : "Demain → ZONE" (grey, no Rappeler)
     ///
-    /// Wire up all TextMeshProUGUI references in the prefab Inspector.
+    /// Hover shows <see cref="MissionTooltipUI"/> with participants / equipment / direction.
     /// </summary>
-    public class MissionEntryUI : MonoBehaviour
+    public class MissionEntryUI : MonoBehaviour,
+        IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
     {
+        private static readonly Color ColorActive  = Color.white;
+        private static readonly Color ColorPending = new Color(0.55f, 0.55f, 0.55f);
+
+        [Header("Labels")]
         [SerializeField] private TextMeshProUGUI destinationText;
-        [SerializeField] private TextMeshProUGUI survivorsText;
-        [SerializeField] private TextMeshProUGUI progressText;
-        [SerializeField] private TextMeshProUGUI resourcesText;
+
+        [Header("Recall (optional)")]
+        [SerializeField] private Button recallButton;
+
+        // ── Runtime ───────────────────────────────────────────────────────────────
+        private ActiveMission          boundMission;
+        private List<SurvivorBehavior> pendingSurvivors;
+        private string[]               pendingEquipment;
+        private string                 pendingDirection;
+        private MissionTooltipUI       tooltip;
 
         // ── Public API ────────────────────────────────────────────────────────────
 
-        /// <summary>Binds this row to a mission and refreshes all display fields.</summary>
-        public void Bind(ExplorationMission mission)
+        /// <summary>Binds to an already-active mission (departed).</summary>
+        public void BindActiveMission(ActiveMission mission, MissionTooltipUI sharedTooltip)
         {
+            boundMission     = mission;
+            pendingSurvivors = null;
+            tooltip          = sharedTooltip;
+
             if (mission == null) return;
-            Refresh(mission);
+
+            string dest = mission.MissionDef != null
+                ? mission.MissionDef.displayName
+                : mission.Zone?.zoneName ?? "Zone inconnue";
+
+            SetText(destinationText, $"Déplacement vers {dest.ToUpper()}");
+            if (destinationText != null) destinationText.color = ColorActive;
+
+            if (recallButton != null)
+            {
+                recallButton.gameObject.SetActive(true);
+                recallButton.onClick.RemoveAllListeners();
+                recallButton.onClick.AddListener(OnRecall);
+            }
         }
 
-        /// <summary>Updates display fields from a live mission (call each frame or on tick).</summary>
-        public void Refresh(ExplorationMission mission)
+        /// <summary>
+        /// Binds to a pending mission (departs tomorrow at 07:00).
+        /// No recall button is shown.
+        /// </summary>
+        public void BindPending(string destinationLabel,
+                                List<SurvivorBehavior> survivors,
+                                string[] equipment,
+                                MissionTooltipUI sharedTooltip)
         {
-            if (mission == null) return;
+            boundMission     = null;
+            pendingSurvivors = survivors;
+            pendingEquipment = equipment;
+            pendingDirection = destinationLabel;
+            tooltip          = sharedTooltip;
 
-            SetText(destinationText, mission.Destination.ToUpper());
+            SetText(destinationText, $"Demain → {destinationLabel.ToUpper()}");
+            if (destinationText != null) destinationText.color = ColorPending;
 
-            // Build survivor name list
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            for (int i = 0; i < mission.Survivors.Count; i++)
-            {
-                SurvivorBehavior survivor = mission.Survivors[i];
-                if (survivor == null) continue;
-                if (sb.Length > 0) sb.Append(", ");
-                sb.Append(survivor.SurvivorName);
-            }
-            SetText(survivorsText, sb.Length > 0 ? sb.ToString() : "—");
+            if (recallButton != null)
+                recallButton.gameObject.SetActive(false);
+        }
 
-            SetText(progressText, mission.GetProgressText());
+        // ── Pointer events ────────────────────────────────────────────────────────
 
-            SetText(resourcesText,
-                $"🍖 +{mission.FoodGathered:F0}  " +
-                $"💧 +{mission.WaterGathered:F0}  " +
-                $"🔧 +{mission.MaterialsGathered:F0}");
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            if (boundMission != null)
+                tooltip?.Show(boundMission);
+            else if (pendingSurvivors != null)
+                tooltip?.ShowPending(pendingSurvivors, pendingEquipment, pendingDirection);
+        }
+
+        public void OnPointerMove(PointerEventData eventData)
+        {
+            tooltip?.MoveToPointer();
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            tooltip?.Hide();
         }
 
         // ── Private ───────────────────────────────────────────────────────────────
+
+        private void OnDisable()  => tooltip?.Hide();
+        private void OnDestroy()  => tooltip?.Hide();
+
+        private void OnRecall()
+        {
+            tooltip?.Hide();
+            if (boundMission == null) return;
+            RadioCallManager.Instance?.RecallMission(boundMission);
+            Destroy(gameObject);
+        }
 
         private static void SetText(TextMeshProUGUI label, string value)
         {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,6 +34,12 @@ namespace ShelterCommand
 
         /// <summary>The resource type stored in this box. Null if empty.</summary>
         public ResourceType? ContentType { get; private set; }
+
+        /// <summary>
+        /// Fires when the player picks up this box so <see cref="ResourceSpawner"/>
+        /// can clear its cached reference and spawn a fresh box on the next production tick.
+        /// </summary>
+        public event Action<CardboardBox> OnPickedUpEvent;
 
         // ── State ────────────────────────────────────────────────────────────────
         private readonly List<ResourceItemBehavior> items = new List<ResourceItemBehavior>();
@@ -103,8 +110,12 @@ namespace ShelterCommand
         {
             isCarried = true;
 
-            // Free the spawn point so a new box can appear there
+            // Free the spawn point so a new box can appear there.
             if (spawnPoint != null) { spawnPoint.Release(); spawnPoint = null; }
+
+            // Notify ResourceSpawner (and any other listeners) so they clear their
+            // cached reference — prevents them from filling this carried box further.
+            OnPickedUpEvent?.Invoke(this);
 
             // Kill physics entirely before reparenting so the Rigidbody
             // doesn't interpolate from its old world position.

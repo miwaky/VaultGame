@@ -292,7 +292,7 @@ namespace ShelterCommand.Editor
             TextMeshProUGUI radioMsgText = CreateLabel(radioPanel, "RadioMessage", "...",
                 new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), 12f);
             radioMsgText.GetComponent<RectTransform>().sizeDelta = new Vector2(420, 80);
-            radioMsgText.enableWordWrapping = true;
+            radioMsgText.textWrappingMode   = TMPro.TextWrappingModes.Normal;
             Button closeRadioBtn = CreateButton(radioPanel, "CloseRadioBtn", "FERMER",
                 new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(120, 34), new Vector2(0, 20));
             radioPanel.SetActive(false);
@@ -665,7 +665,7 @@ namespace ShelterCommand.Editor
             srt.sizeDelta = new Vector2(-6, 0); srt.anchoredPosition = new Vector2(6, 0);
             TextMeshProUGUI statsTMP = statsGo.AddComponent<TextMeshProUGUI>();
             statsTMP.fontSize = 9; statsTMP.color = new Color(0.5f, 0.8f, 0.5f);
-            statsTMP.enableWordWrapping = false;
+            statsTMP.textWrappingMode   = TMPro.TextWrappingModes.NoWrap;
 
             GameObject statusGo = new GameObject("Status");
             statusGo.transform.SetParent(entry.transform, false);

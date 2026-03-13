@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74923e520d083ef439eb296f3479e044, type: 3}
+  m_Name: Dialogue_Transit_Blessure
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.ExplorationDialogue
+  dialogueID: transit_blessure
+  speakerName: Marco
+  dialogueText: "Base ! Un de nos gars s'est bless\xE9 \xE0 la cheville. On rentre
+    ou on continue ?"
+  nodeEvent:
+    eventType: 0
+    selectionMode: 0
+    resources: []
+    targetMission: {fileID: 0}
+  followUpCall: {fileID: 0}
+  followUpDelayDays: 1
+  hasTimeLimit: 1
+  timeLimitSeconds: 40
+  timeoutChoiceIndex: 1
+  choices:
+  - choiceText: "Rentrez imm\xE9diatement."
+    nextDialogue: {fileID: 0}
+    eventTrigger:
+      eventType: 4
+      selectionMode: 0
+      resources: []
+      targetMission: {fileID: 0}
+    followUpCall: {fileID: 0}
+    followUpDelayDays: 1
+  - choiceText: Soignez-le et continuez.
+    nextDialogue: {fileID: 11400000, guid: da83b680620f01c40b23a3e597cc1065, type: 2}
+    eventTrigger:
+      eventType: 3
+      selectionMode: 0
+      resources: []
+      targetMission: {fileID: 0}
+    followUpCall: {fileID: 0}
+    followUpDelayDays: 1

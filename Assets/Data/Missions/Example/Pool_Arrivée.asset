@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 104b99ef2183b2144ab681a79b07a6d7, type: 3}
+  m_Name: "Pool_Arriv\xE9e"
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.EncounterEventPool
+  poolID: pool_arrivee
+  dailyEventChance: 100
+  encounters:
+  - weight: 100
+    radioCall: {fileID: 11400000, guid: d67adea5f3e65a44c8cfc48646a6031b, type: 2}

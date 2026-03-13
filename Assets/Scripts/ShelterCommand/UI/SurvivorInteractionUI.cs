@@ -185,7 +185,7 @@ namespace ShelterCommand
             tmp.fontSize           = fontSize;
             tmp.color              = color;
             tmp.fontStyle          = style;
-            tmp.enableWordWrapping = true;
+            tmp.textWrappingMode   = TMPro.TextWrappingModes.Normal;
             tmp.overflowMode       = TextOverflowModes.Truncate;
             return tmp;
         }

@@ -88,11 +88,35 @@ namespace ShelterCommand
 
         // ── Public API ────────────────────────────────────────────────────────────
 
-        /// <summary>Overrides the current time. Useful for testing or event scripting.</summary>
+        /// <summary>
+        /// Overrides the current time. Forces phase events to re-fire if the new time
+        /// crosses a phase boundary relative to the previous time.
+        /// </summary>
         public void SetTime(int hour, int minute)
         {
             totalMinutes = hour * 60f + minute;
+
+            // Reset lastPhase so ApplyTime re-fires the phase event for the new time,
+            // even if the phase hasn't changed from the caller's perspective.
+            lastPhase = (DayPhase)(-1);
+
             ApplyTime(totalMinutes);
+        }
+
+        /// <summary>
+        /// Used when the player sleeps: advances one logical day via DayManager and jumps
+        /// the clock to 06:00 without triggering a second midnight advance later.
+        /// </summary>
+        public void SkipToNextMorning()
+        {
+            // Mark midnight as already processed so AdvanceTime won't fire AdvanceDay again.
+            hasFiredMidnightAdvance = true;
+            dayManager?.AdvanceDay();
+            // Reset flag after the day advance so the upcoming midnight is fresh.
+            hasFiredMidnightAdvance = false;
+
+            // Jump clock to PreWork (06:00).
+            SetTime(startHour, 0);
         }
 
         /// <summary>Sets the time-speed multiplier at runtime.</summary>

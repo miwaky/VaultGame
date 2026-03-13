@@ -25,6 +25,7 @@ namespace ShelterCommand
         [SerializeField] private TextMeshProUGUI materialsText;
         [SerializeField] private TextMeshProUGUI energyText;
         [SerializeField] private TextMeshProUGUI dayText;
+        [SerializeField] private TextMeshProUGUI timeText;
         [SerializeField] private TextMeshProUGUI populationText;
 
         // ── Camera Wall ──────────────────────────────────────────────────────────
@@ -40,49 +41,11 @@ namespace ShelterCommand
         [SerializeField] private Button     openDossierButton;
         [SerializeField] private Button     openMissionMapButton;
 
-        // ── Order Panel ─────────────────────────────────────────────────────────
-        [Header("Order Panel")]
-        [SerializeField] private GameObject orderPanel;
-        [SerializeField] private TextMeshProUGUI selectedSurvivorNameText;
-        [SerializeField] private TextMeshProUGUI selectedSurvivorStatsText;
-        [SerializeField] private Button repairGeneratorButton;
-        [SerializeField] private Button transportResourcesButton;
-        [SerializeField] private Button craftToolsButton;
-        [SerializeField] private Button goEatButton;
-        [SerializeField] private Button goSleepButton;
-        [SerializeField] private Button goInfirmaryButton;
-        [SerializeField] private Button arrestSurvivorButton;
-        [SerializeField] private Button patrolZoneButton;
-        [SerializeField] private Button cancelOrderButton;
-
-        // ── Mission Map ─────────────────────────────────────────────────────────
-        // (removed)
-
-        // ── Survivor Dossier ────────────────────────────────────────────────────
-        [Header("Survivor Dossier")]
-        [SerializeField] private GameObject survivorDossierPanel;
-        [SerializeField] private Transform survivorListContainer;
-        [SerializeField] private GameObject survivorEntryPrefab;
-        [SerializeField] private Button closeDossierButton;
-
         // ── Radio Panel ─────────────────────────────────────────────────────────
         [Header("Radio Panel")]
         [SerializeField] private GameObject radioPanel;
         [SerializeField] private TextMeshProUGUI radioMessageText;
         [SerializeField] private Button closeRadioButton;
-
-        // ── Event Popup ─────────────────────────────────────────────────────────
-        [Header("Event Popup")]
-        [SerializeField] private GameObject eventPopupPanel;
-        [SerializeField] private TextMeshProUGUI eventTitleText;
-        [SerializeField] private TextMeshProUGUI eventDescriptionText;
-        [SerializeField] private Button eventChoice0Button;
-        [SerializeField] private Button eventChoice1Button;
-        [SerializeField] private TextMeshProUGUI eventChoice0Label;
-        [SerializeField] private TextMeshProUGUI eventChoice1Label;
-
-        // ── Mission Result ──────────────────────────────────────────────────────
-        // (removed)
 
         // ── Notification ────────────────────────────────────────────────────────
         [Header("Notification")]
@@ -101,7 +64,7 @@ namespace ShelterCommand
 
         // ── State ───────────────────────────────────────────────────────────────
         private ShelterGameManager gm;
-        private ShelterEvent pendingEvent;
+        private DayCycleManager    dayCycleManager;
         private static int radioIndex;
 
         // Camera cycling state
@@ -126,6 +89,15 @@ namespace ShelterCommand
         {
             gm = ShelterGameManager.Instance;
             if (gm == null) { Debug.LogError("[ShelterHUD] ShelterGameManager introuvable."); return; }
+
+            dayCycleManager = FindFirstObjectByType<DayCycleManager>();
+            if (dayCycleManager != null)
+            {
+                dayCycleManager.OnTimeChanged += OnTimeChanged;
+                // Display initial time immediately
+                SetText(timeText, dayCycleManager.GetFormattedTime());
+            }
+
             SubscribeEvents();
             SetupButtons();
             HideAllPanels();
@@ -151,21 +123,26 @@ namespace ShelterCommand
 
         // ── Event subscriptions ─────────────────────────────────────────────────
 
+        private void OnDestroy()
+        {
+            if (dayCycleManager != null)
+                dayCycleManager.OnTimeChanged -= OnTimeChanged;
+        }
+
+        private void OnTimeChanged(int hour, int minute)
+        {
+            SetText(timeText, $"{hour:D2}:{minute:D2}");
+        }
+
         private void SubscribeEvents()
         {
-            gm.ResourceManager.OnResourcesChanged += RefreshStatusBar;
+            gm.ResourceManager.OnResourcesChanged  += RefreshStatusBar;
             gm.SurvivorManager.OnPopulationChanged += RefreshStatusBar;
-            gm.SurvivorManager.OnSurvivorSelected += RefreshOrderPanel;
-            gm.SurvivorManager.OnSurvivorDied += s => ShowNotification($"{s.SurvivorName} est mort.");
-            gm.DayManager.OnDayStarted += d => { RefreshStatusBar(); ShowNotification($"Jour {d} — L'abri s'eveille."); };
-            gm.DayManager.OnGameOver += () => { HideAllPanels(); SafeSetActive(gameOverPanel, true); };
-            gm.DayManager.OnGameWon += () => { SafeSetActive(gameWonPanel, true); };
-            gm.EventSystem.OnEventTriggered += ShowEventPopup;
-            gm.CameraRoomController.OnSurvivorClickedInCamera += s =>
-            {
-                gm.SurvivorManager.SelectSurvivor(s);
-                SafeSetActive(orderPanel, true);
-            };
+            gm.SurvivorManager.OnSurvivorDied      += s => ShowNotification($"{s.SurvivorName} est mort.");
+            gm.DayManager.OnDayStarted             += d => { RefreshStatusBar(); ShowNotification($"Jour {d} — L'abri s'eveille."); };
+            gm.DayManager.OnGameOver               += () => { HideAllPanels(); SafeSetActive(gameOverPanel, true); };
+            gm.DayManager.OnGameWon                += () => { SafeSetActive(gameWonPanel, true); };
+            gm.CameraRoomController.OnSurvivorClickedInCamera += s => gm.SurvivorManager.SelectSurvivor(s);
         }
 
         // ── Button setup ────────────────────────────────────────────────────────
@@ -194,34 +171,9 @@ namespace ShelterCommand
         private void SetupButtons()
         {
             closeCameraWallButton?.onClick.AddListener(OnCloseCameraWall);
-            openDossierButton?.onClick.AddListener(ShowDossier);
-
             camPrevButton?.onClick.AddListener(CycleCameraPrev);
             camNextButton?.onClick.AddListener(CycleCameraNext);
-
-            repairGeneratorButton?.onClick.AddListener(() => IssueOrder(OrderType.RepairGenerator));
-            transportResourcesButton?.onClick.AddListener(() => IssueOrder(OrderType.TransportResources));
-            craftToolsButton?.onClick.AddListener(() => IssueOrder(OrderType.CraftTools));
-            goEatButton?.onClick.AddListener(() => IssueOrder(OrderType.GoEat));
-            goSleepButton?.onClick.AddListener(() => IssueOrder(OrderType.GoSleep));
-            goInfirmaryButton?.onClick.AddListener(() => IssueOrder(OrderType.GoToInfirmary));
-            arrestSurvivorButton?.onClick.AddListener(() => IssueOrder(OrderType.ArrestSurvivor));
-            patrolZoneButton?.onClick.AddListener(() => IssueOrder(OrderType.PatrolZone));
-            cancelOrderButton?.onClick.AddListener(() =>
-            {
-                gm.SurvivorManager.DeselectSurvivor();
-                SafeSetActive(orderPanel, false);
-            });
-
-            closeDossierButton?.onClick.AddListener(() =>
-            {
-                SafeSetActive(survivorDossierPanel, false);
-                SafeSetActive(cameraWallPanel, true);
-            });
-
             closeRadioButton?.onClick.AddListener(CloseAllAndReturnToFPS);
-            eventChoice0Button?.onClick.AddListener(() => ResolveEvent(0));
-            eventChoice1Button?.onClick.AddListener(() => ResolveEvent(1));
         }
 
         private void BindRenderTextures() { /* No-op — textures bound dynamically per SecurityCamera */ }
@@ -246,11 +198,9 @@ namespace ShelterCommand
             SafeSetActive(cameraWallPanel,  true);
             SafeSetActive(crosshair,        false);
             SafeSetActive(survivorSidebar,  false);
-            SafeSetActive(orderPanel,       false);
 
             // Hide sidebar-related actions when opened from the computer terminal
-            if (openDossierButton  != null) openDossierButton.gameObject.SetActive(!fromTerminal);
-            if (openMissionMapButton != null) openMissionMapButton.gameObject.SetActive(false); // always hidden
+            if (openMissionMapButton != null) openMissionMapButton.gameObject.SetActive(false);
 
             if (availableCameras.Length > 0)
                 ShowCamera(0, fromTerminal);
@@ -280,7 +230,6 @@ namespace ShelterCommand
                 SafeSetActive(survivorSidebar, true);
                 PopulateFullSurvivorSidebar();
             }
-            SafeSetActive(orderPanel, false);
         }
 
         private void CycleCameraNext()
@@ -378,8 +327,6 @@ namespace ShelterCommand
         /// <summary>Closes all panels and returns to FPS mode.</summary>
         public void CloseAllAndReturnToFPS()
         {
-            if (pendingEvent != null) { ShowNotification("Resolvez l'evenement avant de continuer."); return; }
-
             if (gm.CameraRoomController.IsInFullScreen)
                 gm.CameraRoomController.DeselectRoom();
 
@@ -395,34 +342,7 @@ namespace ShelterCommand
             FindFirstObjectByType<ComputerTerminalProp>()?.NotifyTerminalClosed();
         }
 
-        // ── Dossier ─────────────────────────────────────────────────────────────
-
-        private void ShowDossier()
-        {
-            SafeSetActive(survivorDossierPanel, true);
-            SafeSetActive(cameraWallPanel, false);
-            PopulateDossier();
-        }
-
-        private void PopulateDossier()
-        {
-            if (survivorListContainer == null || survivorEntryPrefab == null)
-            {
-                Debug.LogWarning("[ShelterHUD] survivorListContainer ou survivorEntryPrefab non assigné.");
-                return;
-            }
-            foreach (Transform child in survivorListContainer) Destroy(child.gameObject);
-            foreach (SurvivorBehavior sb in gm.SurvivorManager.Survivors)
-            {
-                if (sb == null) continue;
-                GameObject go = Instantiate(survivorEntryPrefab, survivorListContainer);
-                go.SetActive(true);
-                go.GetComponent<SurvivorEntryUI>()?.Bind(sb);
-            }
-        }
-
-        private void ToggleMissionTeam(SurvivorBehavior sb, Button btn) { }          // kept for compat
-        private static void UpdateMissionToggleColor(Button btn, bool selected) { }  // kept for compat
+        // ── Dossier — REMOVED ────────────────────────────────────────────────────
 
         // ── Status bar ───────────────────────────────────────────────────────────
 
@@ -462,83 +382,6 @@ namespace ShelterCommand
             _ => "CAM-???"
         };
 
-        // ── Order panel ──────────────────────────────────────────────────────────
-
-        private void RefreshOrderPanel(SurvivorBehavior survivor)
-        {
-            if (survivor == null) { SafeSetActive(orderPanel, false); return; }
-            SetText(selectedSurvivorNameText, survivor.SurvivorName.ToUpper());
-            string s = $"Faim:{survivor.Hunger}  Fatigue:{survivor.Fatigue}  Stress:{survivor.Stress}  Moral:{survivor.Morale}";
-            if (survivor.IsSick) s += "  [MALADE]";
-            if (survivor.IsArrested) s += "  [ARRETE]";
-            SetText(selectedSurvivorStatsText, s);
-            SafeSetActive(orderPanel, true);
-        }
-
-        private void IssueOrder(OrderType order)
-        {
-            bool ok = gm.SurvivorManager.IssueOrderToSelected(order, gm.ResourceManager.Resources);
-            ShowNotification(ok ? $"Ordre : {OrderLabel(order)}" : "Ordre refuse — moral trop bas.");
-            SafeSetActive(orderPanel, false);
-        }
-
-        private static string OrderLabel(OrderType o) => o switch
-        {
-            OrderType.RepairGenerator => "Reparer generateur",
-            OrderType.TransportResources => "Transporter ressources",
-            OrderType.CraftTools => "Fabriquer outils",
-            OrderType.GoEat => "Aller manger",
-            OrderType.GoSleep => "Aller dormir",
-            OrderType.GoToInfirmary => "Aller infirmerie",
-            OrderType.ArrestSurvivor => "Arreter",
-            OrderType.PatrolZone => "Patrouiller",
-            _ => o.ToString()
-        };
-
-        // ── Missions — REMOVED ────────────────────────────────────────────────────
-
-        // ── Events ───────────────────────────────────────────────────────────────
-
-        private void ShowEventPopup(ShelterEvent ev)
-        {
-            pendingEvent = ev;
-            SafeSetActive(eventPopupPanel, true);
-            SetText(eventTitleText, $"! {ev.Title.ToUpper()}");
-            SetText(eventDescriptionText, ev.Description);
-
-            if (ev.Choices.Length > 0)
-            {
-                if (eventChoice0Button != null) SafeSetActive(eventChoice0Button.gameObject, true);
-                SetText(eventChoice0Label, $"{ev.Choices[0].Label}\n<size=9><color=#88cc88>{ev.Choices[0].Tooltip}</color></size>");
-            }
-            if (ev.Choices.Length > 1)
-            {
-                if (eventChoice1Button != null) SafeSetActive(eventChoice1Button.gameObject, true);
-                SetText(eventChoice1Label, $"{ev.Choices[1].Label}\n<size=9><color=#88cc88>{ev.Choices[1].Tooltip}</color></size>");
-            }
-
-            // Release cursor so player can click
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-            OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
-            interact?.SetFPSLocked(true);
-            SafeSetActive(crosshair, false);
-        }
-
-        private void ResolveEvent(int choice)
-        {
-            if (pendingEvent == null) return;
-            gm.EventSystem.ResolveEvent(pendingEvent, choice, gm.SurvivorManager, gm.ResourceManager);
-            ShowNotification($"Decision : {pendingEvent.Choices[choice].Label}");
-            pendingEvent = null;
-            SafeSetActive(eventPopupPanel, false);
-
-            // Restore FPS — cursor was released by ShowEventPopup
-            OfficeInteractionSystem interact = FindFirstObjectByType<OfficeInteractionSystem>();
-            interact?.SetFPSLocked(false);
-            SafeSetActive(crosshair, true);
-        }
-
         // ── Utility ──────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -556,10 +399,7 @@ namespace ShelterCommand
         {
             SafeSetActive(cameraWallPanel,      false);
             SafeSetActive(survivorSidebar,      false);
-            SafeSetActive(orderPanel,           false);
-            SafeSetActive(survivorDossierPanel, false);
             SafeSetActive(radioPanel,           false);
-            SafeSetActive(eventPopupPanel,      false);
             SafeSetActive(gameOverPanel,        false);
             SafeSetActive(gameWonPanel,         false);
         }

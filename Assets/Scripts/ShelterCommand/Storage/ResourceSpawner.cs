@@ -65,6 +65,10 @@ namespace ShelterCommand
         {
             if (productionManager != null)
                 productionManager.OnHourlyProduction -= HandleHourlyProduction;
+
+            // Clean up event subscriptions on the tracked boxes
+            UnsubscribeBox(currentFoodBox);
+            UnsubscribeBox(currentWaterBox);
         }
 
         // ── Private ──────────────────────────────────────────────────────────────
@@ -92,10 +96,13 @@ namespace ShelterCommand
             if (itemPrefab == null) return;
 
             // A carried or destroyed box is no longer a valid target — always spawn a fresh one.
+            // Note: IsCarried is always false here because OnPickedUpEvent already nullified 'box'.
+            // The IsCarried guard is kept as a safety net.
             if (box == null || box.IsFull || box.IsCarried || !box.gameObject.activeInHierarchy)
             {
-                box = null;
+                UnsubscribeBox(box);
                 box = SpawnBox(spawnPoints);
+                SubscribeBox(box);
             }
 
             if (box == null) return;
@@ -118,6 +125,34 @@ namespace ShelterCommand
                 Destroy(itemGo);
                 Debug.LogWarning("[ResourceSpawner] Impossible d'ajouter l'item dans le carton.");
             }
+        }
+
+        /// <summary>
+        /// Called when the player picks up a tracked box.
+        /// Clears the reference so the next production tick spawns a fresh box.
+        /// </summary>
+        private void OnBoxPickedUp(CardboardBox box)
+        {
+            if (box == currentFoodBox)
+            {
+                currentFoodBox = null;
+                Debug.Log("[ResourceSpawner] Carton nourriture emporté — prochain tick créera un nouveau carton.");
+            }
+            else if (box == currentWaterBox)
+            {
+                currentWaterBox = null;
+                Debug.Log("[ResourceSpawner] Carton eau emporté — prochain tick créera un nouveau carton.");
+            }
+        }
+
+        private void SubscribeBox(CardboardBox box)
+        {
+            if (box != null) box.OnPickedUpEvent += OnBoxPickedUp;
+        }
+
+        private void UnsubscribeBox(CardboardBox box)
+        {
+            if (box != null) box.OnPickedUpEvent -= OnBoxPickedUp;
         }
 
         /// <summary>

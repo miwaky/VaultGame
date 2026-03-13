@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 104b99ef2183b2144ab681a79b07a6d7, type: 3}
+  m_Name: Pool_Global_Transit
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.EncounterEventPool
+  poolID: pool_global_transit
+  dailyEventChance: 85
+  encounters:
+  - weight: 40
+    radioCall: {fileID: 11400000, guid: 2d97ea4951ff9514c8550a0da536b977, type: 2}
+  - weight: 25
+    radioCall: {fileID: 11400000, guid: 1e8367358cbce7e4b807b349db11b9f6, type: 2}
+  - weight: 10
+    radioCall: {fileID: 11400000, guid: 038eb70c1acf5cf42930cf525b68c258, type: 2}
+  - weight: 15
+    radioCall: {fileID: 11400000, guid: 20e4d59d592f3d1428cb816b3d2374b0, type: 2}
+  - weight: 10
+    radioCall: {fileID: 11400000, guid: 63756426f6373b448b9dd17987ef270d, type: 2}

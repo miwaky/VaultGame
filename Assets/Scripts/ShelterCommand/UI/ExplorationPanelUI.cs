@@ -33,13 +33,19 @@ namespace ShelterCommand
         [SerializeField] private Button             launchButton;
         [SerializeField] private TextMeshProUGUI    launchFeedbackText;
 
-        // ── Exploring survivors list ──────────────────────────────────────────────
-        [Header("Exploring Survivors (right column, bottom)")]
-        [SerializeField] private Transform          exploringListContainer;
-        [SerializeField] private GameObject         exploringRowPrefab;
+        // ── Exploring missions list ───────────────────────────────────────────────
+
+        [Header("Exploring Missions (right column, bottom)")]
+        [Tooltip("Parent transform where MissionEntryUI rows are spawned.")]
+        [SerializeField] private Transform  exploringListContainer;
+        [Tooltip("Prefab with a MissionEntryUI component.")]
+        [SerializeField] private GameObject exploringRowPrefab;
+        [Tooltip("Shared tooltip panel (child of the root Canvas). Set once in the Inspector.")]
+        [SerializeField] private MissionTooltipUI missionTooltip;
 
         // ── Dependencies ──────────────────────────────────────────────────────────
-        private SurvivorManager survivorManager;
+        private SurvivorManager  survivorManager;
+        private DayCycleManager  dayCycleManager;
 
         // ── Internal state ────────────────────────────────────────────────────────
         private readonly List<(Button btn, SurvivorBehavior survivor)> survivorRows =
@@ -53,6 +59,7 @@ namespace ShelterCommand
 
         private static readonly Color ColorAvailable = new Color(0.12f, 0.22f, 0.12f, 1f);
         private static readonly Color ColorSelected  = new Color(0.1f,  0.50f, 0.15f, 1f);
+        private static readonly Color ColorPending   = new Color(0.35f, 0.10f, 0.10f, 1f);
 
         // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -67,6 +74,14 @@ namespace ShelterCommand
             if (survivorManager != null)
                 survivorManager.OnPopulationChanged += Populate;
 
+            // Refresh when missions activate (06:00 OnPreWorkStart)
+            dayCycleManager ??= FindFirstObjectByType<DayCycleManager>();
+            if (dayCycleManager != null)
+            {
+                dayCycleManager.OnPreWorkStart += BuildExploringList;
+                dayCycleManager.OnWorkStart    += BuildExploringList;
+            }
+
             RegisterZoneButtons();
             Populate();
         }
@@ -75,6 +90,12 @@ namespace ShelterCommand
         {
             if (survivorManager != null)
                 survivorManager.OnPopulationChanged -= Populate;
+
+            if (dayCycleManager != null)
+            {
+                dayCycleManager.OnPreWorkStart -= BuildExploringList;
+                dayCycleManager.OnWorkStart    -= BuildExploringList;
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
@@ -103,27 +124,60 @@ namespace ShelterCommand
             survivorRows.Clear();
             if (survivorManager == null) return;
 
+            // Collect pending survivors (assigned but not yet departed)
+            HashSet<SurvivorBehavior> pendingSurvivors = GetPendingSurvivors();
+
             foreach (SurvivorBehavior survivor in survivorManager.Survivors)
             {
-                if (survivor == null || !survivor.IsAlive || survivor.IsOnMission) continue;
+                if (survivor == null || !survivor.IsAlive) continue;
+                // Hide survivors who have actually departed (IsOnMission = SetActive(false))
+                if (survivor.IsOnMission) continue;
+
+                bool isPending   = pendingSurvivors.Contains(survivor);
+                bool isAvailable = !isPending && !selectedSurvivors.Contains(survivor);
 
                 GameObject      row = Instantiate(survivorRowPrefab, survivorListContainer);
                 Button          btn = row.GetComponent<Button>();
                 TextMeshProUGUI lbl = row.GetComponentInChildren<TextMeshProUGUI>();
 
-                if (lbl != null) lbl.text = survivor.SurvivorName;
+                if (lbl != null)
+                    lbl.text = isPending ? $"{survivor.SurvivorName} (en attente)" : survivor.SurvivorName;
 
                 if (btn != null)
                 {
                     Image bg = btn.GetComponent<Image>();
-                    if (bg != null) bg.color = ColorAvailable;
+                    if (bg != null)
+                        bg.color = isPending
+                            ? ColorPending
+                            : selectedSurvivors.Contains(survivor) ? ColorSelected : ColorAvailable;
 
-                    SurvivorBehavior captured = survivor;
-                    btn.onClick.AddListener(() => ToggleSurvivor(captured));
+                    btn.interactable = !isPending;
+
+                    if (!isPending)
+                    {
+                        SurvivorBehavior captured = survivor;
+                        btn.onClick.AddListener(() => ToggleSurvivor(captured));
+                    }
                 }
 
                 survivorRows.Add((btn, survivor));
             }
+        }
+
+        /// <summary>Returns survivors assigned to pending missions (not yet departed).</summary>
+        private HashSet<SurvivorBehavior> GetPendingSurvivors()
+        {
+            var result = new HashSet<SurvivorBehavior>();
+            RadioCallManager rcm = RadioCallManager.Instance;
+            if (rcm == null) return result;
+
+            foreach ((List<SurvivorBehavior> survivors, ExplorationZone _) in rcm.PendingZoneMissions)
+                foreach (SurvivorBehavior s in survivors) if (s != null) result.Add(s);
+
+            foreach ((List<SurvivorBehavior> survivors, MissionData _) in rcm.PendingDataMissions)
+                foreach (SurvivorBehavior s in survivors) if (s != null) result.Add(s);
+
+            return result;
         }
 
         private void ToggleSurvivor(SurvivorBehavior survivor)
@@ -226,14 +280,20 @@ namespace ShelterCommand
                 return;
             }
 
-            foreach (SurvivorBehavior survivor in selectedSurvivors)
-                survivor.SetOnMission(true);
-
             ExplorationZone zone = selectedZone.Zone;
-            ShowFeedback($"En route vers {zone.zoneName} — {zone.daysFromBase} jour(s).", false);
 
-            Debug.Log($"[ExplorationPanelUI] Exploration → {zone.zoneName} " +
-                      $"({selectedSurvivors.Count} survivant(s), {zone.daysFromBase}j).");
+            // Delegate to RadioCallManager — survivors will depart tomorrow at 07:00
+            if (RadioCallManager.Instance != null)
+                RadioCallManager.Instance.ScheduleExploration(new System.Collections.Generic.List<SurvivorBehavior>(selectedSurvivors), zone);
+            else
+            {
+                // Fallback: immediate departure if no RadioCallManager in scene
+                foreach (SurvivorBehavior survivor in selectedSurvivors)
+                    survivor.SetOnMission(true);
+                Debug.LogWarning("[ExplorationPanelUI] RadioCallManager absent — départ immédiat.");
+            }
+
+            ShowFeedback($"Départ demain 07:00 → {zone.zoneName} ({zone.daysFromBase}j).", false);
 
             selectedSurvivors.Clear();
             selectedZone.SetSelected(false);
@@ -244,7 +304,7 @@ namespace ShelterCommand
             RefreshSummary();
         }
 
-        // ── Exploring survivors list ──────────────────────────────────────────────
+        // ── Exploring missions list ───────────────────────────────────────────────
 
         private void BuildExploringList()
         {
@@ -253,34 +313,36 @@ namespace ShelterCommand
             foreach (Transform child in exploringListContainer)
                 Destroy(child.gameObject);
 
-            if (survivorManager == null) return;
+            RadioCallManager rcm = RadioCallManager.Instance;
+            if (rcm == null) return;
 
-            foreach (SurvivorBehavior survivor in survivorManager.Survivors)
+            // ── Active missions (already departed) ────────────────────────────────
+            foreach (ActiveMission mission in rcm.ActiveMissions)
             {
-                if (survivor == null || !survivor.IsAlive || !survivor.IsOnMission) continue;
-
-                GameObject      row = Instantiate(exploringRowPrefab, exploringListContainer);
-                TextMeshProUGUI lbl = row.GetComponentInChildren<TextMeshProUGUI>();
-                Button          btn = row.GetComponentInChildren<Button>();
-
-                if (lbl != null) lbl.text = survivor.SurvivorName;
-
-                if (btn != null)
-                {
-                    SurvivorBehavior captured = survivor;
-                    btn.onClick.AddListener(() => RecallSurvivor(captured));
-                }
+                if (mission == null) continue;
+                GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
+                MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
+                entry?.BindActiveMission(mission, missionTooltip);
             }
-        }
 
-        private void RecallSurvivor(SurvivorBehavior survivor)
-        {
-            if (survivor == null) return;
-            survivor.SetOnMission(false);
-            ShowFeedback($"{survivor.SurvivorName} est rentré.", false);
-            BuildSurvivorList();
-            BuildExploringList();
-            RefreshSummary();
+            // ── Pending zone missions (depart tomorrow) ───────────────────────────
+            foreach ((List<SurvivorBehavior> survivors, ExplorationZone zone) in rcm.PendingZoneMissions)
+            {
+                if (zone == null) continue;
+                GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
+                MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
+                entry?.BindPending(zone.zoneName, survivors, zone.equipment, missionTooltip);
+            }
+
+            // ── Pending data-driven missions (depart tomorrow) ────────────────────
+            foreach ((List<SurvivorBehavior> survivors, MissionData data) in rcm.PendingDataMissions)
+            {
+                if (data == null) continue;
+                string[]       gear  = data.equipment?.Length > 0 ? data.equipment : data.zone?.equipment;
+                GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
+                MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
+                entry?.BindPending(data.displayName, survivors, gear, missionTooltip);
+            }
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────────

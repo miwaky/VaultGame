@@ -11,7 +11,6 @@ namespace ShelterCommand
         [Header("References")]
         [SerializeField] private SurvivorManager survivorManager;
         [SerializeField] private ShelterResourceManager resourceManager;
-        [SerializeField] private ShelterEventSystem eventSystem;
 
         [Header("Day Settings")]
         [SerializeField] private int startingDay = 1;
@@ -54,9 +53,6 @@ namespace ShelterCommand
             survivorManager.TickDay(resourceManager.Resources);
 
             CurrentDay++;
-
-            // Try triggering a random event
-            eventSystem.TryTriggerRandomEvent();
 
             // Check win/lose conditions
             CheckEndConditions();

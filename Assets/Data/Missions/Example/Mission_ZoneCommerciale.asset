@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 168a8c86f88132d4aa6adbfca3e4973e, type: 3}
+  m_Name: Mission_ZoneCommerciale
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.MissionData
+  missionID: mission_zone_commerciale
+  displayName: "Zone Commerciale \u2014 2 jours"
+  zone: {fileID: 11400000, guid: 495b4ad599036e0458e23c1eb4136e06, type: 2}
+  radioCalls: []
+  encounterPool: {fileID: 0}
+  followUps: []
+  requiresLocationTrigger: 0

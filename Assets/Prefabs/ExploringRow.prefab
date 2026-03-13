@@ -149,6 +149,7 @@ GameObject:
   - component: {fileID: 1952832946804157857}
   - component: {fileID: 5146765983998439272}
   - component: {fileID: 2296789037416365770}
+  - component: {fileID: 817719803588499231}
   m_Layer: 0
   m_Name: ExploringRow
   m_TagString: Untagged
@@ -241,6 +242,20 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &817719803588499231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2759484582278671441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe01bfb9090f23949ab98a965fc16712, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.MissionEntryUI
+  destinationText: {fileID: 2333426775708736708}
+  recallButton: {fileID: 5166869050017977145}
 --- !u!1 &5447649194350343968
 GameObject:
   m_ObjectHideFlags: 0

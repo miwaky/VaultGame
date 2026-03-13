@@ -44,11 +44,22 @@ namespace ShelterCommand
 
         private void Start()
         {
-            DayManager dayManager = FindFirstObjectByType<DayManager>();
-            if (dayManager != null)
-                dayManager.OnDayStarted += _ => ResetSchedule();
+            // Reset the schedule at PreWork (06:00) so survivors still benefit from
+            // the previous day's assignment during the overnight work tick at 07:00.
+            // Resetting on DayManager.OnDayStarted was too early and wiped the
+            // schedule before HourlyProductionManager could count workers.
+            DayCycleManager cycle = FindFirstObjectByType<DayCycleManager>();
+            if (cycle != null)
+                cycle.OnPreWorkStart += ResetSchedule;
             else
-                Debug.LogWarning("[ScheduleManager] DayManager introuvable — reset automatique désactivé.");
+                Debug.LogWarning("[ScheduleManager] DayCycleManager introuvable — reset automatique désactivé.");
+        }
+
+        private void OnDestroy()
+        {
+            DayCycleManager cycle = FindFirstObjectByType<DayCycleManager>();
+            if (cycle != null)
+                cycle.OnPreWorkStart -= ResetSchedule;
         }
     }
 }

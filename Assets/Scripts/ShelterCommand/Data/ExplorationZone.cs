@@ -24,5 +24,15 @@ namespace ShelterCommand
 
         [Tooltip("Colour tint applied to the zone button when unselected.")]
         public Color zoneColor = new Color(0.2f, 0.6f, 0.2f, 1f);
+
+        [Tooltip("Radio calls that fire on specific mission days when exploring this zone.")]
+        public RadioCallEvent[] radioCalls = System.Array.Empty<RadioCallEvent>();
+
+        [Tooltip("Zone-specific encounter pool. Merged with the global pool in RadioCallManager. " +
+                 "Leave empty to use only the global pool.")]
+        public EncounterEventPool encounterPool;
+
+        [Tooltip("Equipment the team typically carries for this zone. Shown in the exploration tooltip.")]
+        public string[] equipment = new[] { "Rations (2j)", "Eau (3L)" };
     }
 }
