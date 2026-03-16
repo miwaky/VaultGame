@@ -115,9 +115,10 @@ namespace ShelterCommand
         private readonly Queue<(RadioCallEvent, ActiveMission)> callQueue      = new Queue<(RadioCallEvent, ActiveMission)>();
 
         // ── Dependencies ──────────────────────────────────────────────────────────
-        private DayManager      dayManager;
-        private DayCycleManager dayCycleManager;
-        private DialogueManager dialogueManager;
+        private DayManager        dayManager;
+        private DayCycleManager   dayCycleManager;
+        private DialogueManager   dialogueManager;
+        private TelephoneController telephoneController;
 
         // ── Pending (scheduled for next day's departure) ──────────────────────────
         private readonly List<(List<SurvivorBehavior>, ExplorationZone)> pendingMissions =
@@ -170,12 +171,16 @@ namespace ShelterCommand
 
         private void Start()
         {
-            dayManager      = FindFirstObjectByType<DayManager>();
-            dayCycleManager = FindFirstObjectByType<DayCycleManager>();
-            dialogueManager = FindFirstObjectByType<DialogueManager>();
+            dayManager          = FindFirstObjectByType<DayManager>();
+            dayCycleManager     = FindFirstObjectByType<DayCycleManager>();
+            dialogueManager     = FindFirstObjectByType<DialogueManager>();
+            telephoneController = FindFirstObjectByType<TelephoneController>();
 
             if (dayManager == null)
                 Debug.LogWarning("[RadioCallManager] DayManager introuvable.");
+
+            if (telephoneController == null)
+                Debug.LogWarning("[RadioCallManager] TelephoneController introuvable — les appels passeront directement au DialogueManager.");
 
             if (dayCycleManager != null)
             {
@@ -494,7 +499,7 @@ namespace ShelterCommand
 
             (RadioCallEvent rc, ActiveMission mission) = callQueue.Dequeue();
 
-            Debug.Log($"[RadioCallManager] ▶ DrainCallQueue → StartDialogue('{rc.name}', dialogue={rc.dialogue?.name ?? "NULL"})");
+            Debug.Log($"[RadioCallManager] ▶ DrainCallQueue → appel '{rc.name}' (dialogue={rc.dialogue?.name ?? "NULL"})");
 
             if (rc.dialogue == null)
             {
@@ -503,8 +508,20 @@ namespace ShelterCommand
                 return;
             }
 
-            // Chain: after dialogue ends, drain the next call
-            dialogueManager.StartDialogue(rc, mission, () => DrainCallQueue());
+            // Passe par le téléphone si disponible pour afficher la notification visuelle.
+            // Sinon repli direct sur le DialogueManager (comportement legacy).
+            if (telephoneController == null)
+                telephoneController = FindFirstObjectByType<TelephoneController>();
+
+            if (telephoneController != null)
+            {
+                telephoneController.ReceiveIncomingCall(rc, mission, () => DrainCallQueue());
+                // Le dialogue démarrera quand le joueur clique sur "Répondre".
+            }
+            else
+            {
+                dialogueManager.StartDialogue(rc, mission, () => DrainCallQueue());
+            }
         }
     }
 }

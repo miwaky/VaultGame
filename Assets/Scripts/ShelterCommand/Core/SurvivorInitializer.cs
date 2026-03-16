@@ -8,12 +8,13 @@ namespace ShelterCommand
     /// Generates and spawns all survivors at game start.
     ///
     /// Flow per survivor:
-    ///   1. SurvivorProfileGenerator.Generate()  — random data
-    ///   2. Create a fresh Capsule GameObject     — no prefab dependency
+    ///   1. SurvivorProfileGenerator.Generate()  — random data (includes gender)
+    ///   2. Create a root GameObject              — no capsule mesh on the root
     ///   3. Add SurvivorBehavior + all components by code
     ///   4. SetProfile() + SetStartingRoom()      — survivor receives all info
-    ///   5. Warp to SurvivorSpawnZone → PlaceInStartingRoom()
-    ///   6. SurvivorIdleMovement walks to its IdlePoint
+    ///   5. Spawn a gender-correct visual prefab  — child of the root
+    ///   6. Warp to SurvivorSpawnZone → PlaceInStartingRoom()
+    ///   7. SurvivorIdleMovement walks to its IdlePoint
     /// </summary>
     public class SurvivorInitializer : MonoBehaviour
     {
@@ -42,11 +43,16 @@ namespace ShelterCommand
         [Tooltip("ScriptableObject populated at runtime with all generated profiles.")]
         [SerializeField] private SurvivorRosterConfig rosterConfig;
 
+        [Header("Visual System")]
+        [Tooltip("ScriptableObject with the male and female visual prefab pools.")]
+        [SerializeField] private SurvivorVisualConfig visualConfig;
+
         // ── Constants ─────────────────────────────────────────────────────────────
 
-        private const float NavMeshSampleRadius  = 6f;
+        private const float NavMeshSampleRadius   = 6f;
         private const float MinSeparationDistance = 0.8f;
         private const int   MaxPlacementAttempts  = 30;
+        private const string VisualChildName      = "Model";
 
         // ── State ─────────────────────────────────────────────────────────────────
 
@@ -90,7 +96,7 @@ namespace ShelterCommand
 
         private SurvivorBehavior SpawnOne(Transform parent)
         {
-            // 1. Generate profile
+            // 1. Generate profile (includes gender)
             SurvivorGeneratedProfile profile = SurvivorProfileGenerator.Generate();
 
             // 2. Find NavMesh position near SurvivorSpawnZone
@@ -100,26 +106,40 @@ namespace ShelterCommand
                 return null;
             }
 
-            // 3. Create capsule GameObject
-            GameObject go = CreateCapsuleObject(spawnPos, parent);
+            // 3. Create root GameObject (no mesh on the root itself)
+            GameObject go = CreateRootObject(profile.survivorName, spawnPos, parent);
 
-            // 4. Add SurvivorBehavior and configure it
+            // 4. Add CapsuleCollider on root for raycasts and NavMeshAgent footprint
+            CapsuleCollider col = go.AddComponent<CapsuleCollider>();
+            col.height = 1.8f;
+            col.radius = 0.3f;
+            col.center = new Vector3(0f, 0.9f, 0f);
+
+            // 5. Add SurvivorBehavior and configure it
             SurvivorBehavior sb = go.AddComponent<SurvivorBehavior>();
             sb.SetProfile(profile);
             if (startingRoom != null) sb.SetStartingRoom(startingRoom);
 
-            // 5. Add NavMeshAgent
+            // 6. Add NavMeshAgent
             NavMeshAgent agent = go.AddComponent<NavMeshAgent>();
             ConfigureAgent(agent);
 
-            // 6. Add SurvivorInteractable (enables E-key interaction)
+            // 7. Spawn visual model as child and retrieve its Animator
+            Animator modelAnimator = SpawnVisualModel(go.transform, profile.gender);
+
+            // 8. Add SurvivorAnimatorController and wire the Animator
+            SurvivorAnimatorController animCtrl = go.AddComponent<SurvivorAnimatorController>();
+            if (modelAnimator != null)
+                animCtrl.SetAnimator(modelAnimator);
+
+            // 9. Add SurvivorInteractable (enables E-key interaction)
             go.AddComponent<SurvivorInteractable>();
 
-            // 7. Warp into starting room (now that agent is on NavMesh)
+            // 10. Warp into starting room (now that agent is on NavMesh)
             if (startingRoom != null)
                 sb.PlaceInStartingRoom();
 
-            // 8. Walk to idle point
+            // 11. Walk to idle point
             Transform idle = AssignIdlePoint();
             if (idle != null)
             {
@@ -130,25 +150,44 @@ namespace ShelterCommand
             return sb;
         }
 
-        // ── Private — capsule factory ─────────────────────────────────────────────
+        // ── Private — visual model ────────────────────────────────────────────────
 
-        private static GameObject CreateCapsuleObject(Vector3 position, Transform parent)
+        /// <summary>
+        /// Instantiates a random visual prefab matching the gender as a child of parent.
+        /// Returns the Animator found on the instantiated model, or null if unavailable.
+        /// </summary>
+        private Animator SpawnVisualModel(Transform parent, SurvivorGender gender)
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            if (visualConfig == null)
+            {
+                Debug.LogWarning("[SurvivorInitializer] SurvivorVisualConfig non assigné — aucun modèle 3D.");
+                return null;
+            }
+
+            GameObject prefab = visualConfig.GetRandomPrefab(gender);
+            if (prefab == null) return null;
+
+            GameObject model = Instantiate(prefab, parent);
+            model.name = VisualChildName;
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            // Keep the prefab's authored scale (0.4, 0.4, 0.4) — do NOT reset to Vector3.one
+
+            // Disable any collider on the visual model — the root already owns one
+            foreach (Collider c in model.GetComponentsInChildren<Collider>())
+                c.enabled = false;
+
+            return model.GetComponentInChildren<Animator>();
+        }
+
+        // ── Private — root factory ────────────────────────────────────────────────
+
+        private static GameObject CreateRootObject(string survivorName, Vector3 position, Transform parent)
+        {
+            GameObject go = new GameObject(survivorName);
             go.transform.SetParent(parent);
             go.transform.position   = position;
             go.transform.localScale = Vector3.one;
-
-            Renderer rend = go.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                rend.material = new Material(Shader.Find("Standard"))
-                {
-                    color = new Color(0.76f, 0.60f, 0.42f)
-                };
-            }
-
-            // CapsuleCollider added by CreatePrimitive is reused by SurvivorBehavior.Awake()
             return go;
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,8 +7,8 @@ namespace ShelterCommand
 {
     /// <summary>
     /// Main controller for the computer terminal software menu.
-    /// Manages navigation between the main menu and the four sub-panels:
-    /// Camera (delegates to ShelterHUD.CameraWallPanel), Schedule, Exploration, and Residents.
+    /// Manages navigation between the main menu and the sub-panels:
+    /// Camera (owned by CameraWallPanelUI inside ComputerUI), Schedule, Exploration, and Residents.
     ///
     /// Attach this to the root Canvas of the computer UI.
     /// Wire up all serialized fields in the Inspector.
@@ -26,14 +27,18 @@ namespace ShelterCommand
         [Tooltip("Le bouton X en haut à droite qui ferme le terminal.")]
         [SerializeField] private Button mainMenuCloseButton;
 
-        // ── Sub-panels (Schedule, Exploration, Residents only) ───────────────────
-        // Camera is handled exclusively by ShelterHUD.CameraWallPanel.
+        // ── Camera panel (now part of ComputerUI) ────────────────────────────────
+        [Header("Camera Panel")]
+        [Tooltip("The CameraWallPanelUI GameObject living inside ComputerUI.")]
+        [SerializeField] private CameraWallPanelUI cameraWallPanelUI;
+
+        // ── Sub-panels ────────────────────────────────────────────────────────────
         [Header("Sub-Panels")]
         [SerializeField] private GameObject schedulePanel;
         [SerializeField] private GameObject explorationPanel;
         [SerializeField] private GameObject residentsPanel;
 
-        // ── X buttons on Exploration panel ───────────────────────────────────────
+        // ── Panel close buttons ───────────────────────────────────────────────────
         [Header("Panel Close Buttons")]
         [Tooltip("The X button on the ExplorationPanel.")]
         [SerializeField] private Button explorationCloseButton;
@@ -62,20 +67,20 @@ namespace ShelterCommand
         private void Awake()
         {
             BindButtons();
+
+            // Ensure the camera panel is hidden at startup
+            if (cameraWallPanelUI != null)
+                cameraWallPanelUI.gameObject.SetActive(false);
         }
 
         private void Start()
         {
             shelterHUD = FindFirstObjectByType<ShelterHUD>();
-            if (shelterHUD == null)
-                Debug.LogWarning("[ComputerMenuController] ShelterHUD introuvable — le panel Caméra ne fonctionnera pas.");
         }
 
         // ── Public API ───────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Opens the computer interface. Locks FPS, shows cursor, hides crosshair.
-        /// </summary>
+        /// <summary>Opens the computer interface. Locks FPS, shows cursor, hides crosshair.</summary>
         public void Open(OfficeInteractionSystem interaction, Action onQuit)
         {
             interactionSystem = interaction;
@@ -88,7 +93,6 @@ namespace ShelterCommand
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible   = true;
 
-            // Hide FPS crosshair — always go through ShelterHUD to keep a single source of truth
             SetCrosshair(false);
 
             gameObject.SetActive(true);
@@ -98,6 +102,9 @@ namespace ShelterCommand
         /// <summary>Closes the interface, restores FPS control, and hides the cursor.</summary>
         public void Close()
         {
+            // Make sure any active camera controller is deactivated before closing.
+            cameraWallPanelUI?.Close();
+
             HideAllPanels();
             gameObject.SetActive(false);
 
@@ -107,17 +114,14 @@ namespace ShelterCommand
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible   = false;
 
-            // Restore crosshair for FPS gameplay
             SetCrosshair(true);
 
             onQuitCallback?.Invoke();
         }
 
-        /// <summary>Returns to the main menu from any sub-panel (called by X buttons).</summary>
+        /// <summary>Returns to the main menu from any sub-panel (called by X buttons or CameraWallPanelUI).</summary>
         public void ShowMainMenu()
         {
-            // NOTE: we stay inside the terminal — do NOT call CloseAllAndReturnToFPS here.
-            // Just re-show the main menu, keep FPS locked and crosshair hidden.
             HideAllPanels();
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible   = true;
@@ -127,27 +131,34 @@ namespace ShelterCommand
 
         // ── Navigation ───────────────────────────────────────────────────────────
 
-        /// <summary>Delegates camera display to the existing ShelterHUD.CameraWallPanel.</summary>
+        /// <summary>Opens the camera panel embedded inside ComputerUI.</summary>
         private void OpenCameraPanel()
         {
-            HideAllPanels();
-
-            if (shelterHUD == null)
+            if (cameraWallPanelUI == null)
             {
-                Debug.LogWarning("[ComputerMenuController] ShelterHUD introuvable.");
+                Debug.LogWarning("[ComputerMenuController] CameraWallPanelUI non assigné dans l'Inspector.");
                 return;
             }
 
-            // Hide our own Canvas so only the ShelterHUD camera wall is visible.
-            // ComputerUI stays active so Update() and button listeners remain live.
-            SafeSetActive(mainMenuPanel, false);
+            HideAllPanels();
 
-            SecurityCamera[] cameras = FindObjectsByType<SecurityCamera>(FindObjectsSortMode.None);
-            for (int i = 0; i < cameras.Length; i++)
-                cameras[i].CameraLabel = $"CAM-{i + 1:D2}";
+            // Discover all SecurityCameraController in the scene
+            SecurityCameraController[] controllers =
+                FindObjectsByType<SecurityCameraController>(FindObjectsSortMode.None);
 
-            // ShelterHUD shows its CameraWallPanel without sidebar/dossier/mission buttons
-            shelterHUD.OpenCameraWall(cameras, fromTerminal: true);
+            Debug.Log($"[ComputerMenuController] OpenCameraPanel — {controllers.Length} SecurityCameraController trouvés.");
+
+            foreach (var c in controllers)
+                Debug.Log($"[ComputerMenuController]   → {c.name} (actif={c.gameObject.activeSelf}, SecurityCamera={c.SecurityCamera})");
+
+            // Sort by name for deterministic ordering
+            System.Array.Sort(controllers, (a, b) =>
+                string.Compare(a.name, b.name, System.StringComparison.OrdinalIgnoreCase));
+
+            cameraWallPanelUI.gameObject.SetActive(true);
+            Debug.Log($"[ComputerMenuController] cameraWallPanelUI.activeSelf après SetActive(true) = {cameraWallPanelUI.gameObject.activeSelf}");
+
+            cameraWallPanelUI.Open(controllers, this);
         }
 
         private void OpenSchedulePanel()
@@ -185,17 +196,11 @@ namespace ShelterCommand
 
         // ── Helpers ──────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Single entry point for crosshair visibility.
-        /// Uses the direct reference first, then falls back to ShelterHUD.
-        /// Always syncs both so they stay consistent.
-        /// </summary>
         private void SetCrosshair(bool visible)
         {
             if (crosshairObject != null)
                 crosshairObject.SetActive(visible);
 
-            // Also tell ShelterHUD so CloseAllAndReturnToFPS does not conflict
             shelterHUD?.SetCrosshairVisible(visible);
         }
 
@@ -205,6 +210,10 @@ namespace ShelterCommand
             SafeSetActive(schedulePanel,    false);
             SafeSetActive(explorationPanel, false);
             SafeSetActive(residentsPanel,   false);
+
+            // Close camera panel without destroying — it deactivates itself.
+            if (cameraWallPanelUI != null && cameraWallPanelUI.gameObject.activeSelf)
+                cameraWallPanelUI.Close();
         }
 
         private static void SafeSetActive(GameObject go, bool active)

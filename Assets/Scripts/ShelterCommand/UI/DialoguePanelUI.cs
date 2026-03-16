@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using TMPro;
 
 namespace ShelterCommand
 {
     /// <summary>
-    /// Panneau de dialogue radio.
+    /// Panneau de dialogue partagé — radio ET PNJ.
     ///
     /// Deux zones distinctes :
     ///   • NpcZone   (haut)  — badge speaker + boîte texte, pagination via Entrée/Espace.
@@ -15,6 +16,8 @@ namespace ShelterCommand
     /// Pagination : TextOverflowModes.Page sur dialogueTextLabel.
     ///   Pages 1..n-1 → indicateur "▼  Entrée" visible, ChoicesZone cachée.
     ///   Page n (dernière) → indicateur caché, ChoicesZone affichée (choix ou OK).
+    ///
+    /// Fermeture : E, Échap, Entrée (dernière page), ou clic OK.
     /// </summary>
     public class DialoguePanelUI : MonoBehaviour
     {
@@ -68,11 +71,13 @@ namespace ShelterCommand
             gameObject.SetActive(true);
 
             if (speakerNameLabel != null)
-                speakerNameLabel.text = ctx.Apply(node.speakerName);
+                speakerNameLabel.text = ctx != null ? ctx.Apply(node.speakerName) : node.speakerName;
 
             HideTimer();
             HideChoicesZone();
-            SetupPagination(ctx.Apply(node.dialogueText));
+
+            string text = ctx != null ? ctx.Apply(node.dialogueText) : node.dialogueText;
+            SetupPagination(text);
         }
 
         /// <summary>Ferme et réinitialise le panneau.</summary>
@@ -98,14 +103,29 @@ namespace ShelterCommand
             if (timerRoot != null) timerRoot.SetActive(false);
         }
 
-        // ── Pagination ────────────────────────────────────────────────────────────
+        // ── Input ─────────────────────────────────────────────────────────────────
 
         private void Update()
         {
-            if (!awaitingPageTurn) return;
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space))
+            if (!gameObject.activeSelf) return;
+            if (Keyboard.current == null) return;
+
+            bool confirmPressed = Keyboard.current.enterKey.wasPressedThisFrame ||
+                                  Keyboard.current.spaceKey.wasPressedThisFrame;
+            bool closePressed   = Keyboard.current.eKey.wasPressedThisFrame     ||
+                                  Keyboard.current.escapeKey.wasPressedThisFrame;
+
+            if (closePressed)
+            {
+                manager?.EndDialogue();
+                return;
+            }
+
+            if (awaitingPageTurn && confirmPressed)
                 AdvancePage();
         }
+
+        // ── Pagination ────────────────────────────────────────────────────────────
 
         private void SetupPagination(string fullText)
         {
@@ -196,7 +216,8 @@ namespace ShelterCommand
                 spawnedButtons.Add(btnGo);
 
                 TextMeshProUGUI lbl = btnGo.GetComponentInChildren<TextMeshProUGUI>(true);
-                if (lbl != null) lbl.text = ctx.Apply(choice.choiceText);
+                if (lbl != null)
+                    lbl.text = ctx != null ? ctx.Apply(choice.choiceText) : choice.choiceText;
 
                 Button btn = btnGo.GetComponent<Button>();
                 if (btn != null)

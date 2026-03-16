@@ -28,6 +28,7 @@ namespace ShelterCommand
         public bool      IsSick       { get; private set; } = false;
         public bool      IsArrested   { get; private set; } = false;
         public bool      IsOnMission  { get; private set; } = false;
+        public bool      IsWorking    { get; private set; } = false;
         public OrderType CurrentOrder { get; private set; } = OrderType.GoSleep;
         public ShelterRoom CurrentRoom { get; private set; }
 
@@ -185,6 +186,9 @@ namespace ShelterCommand
         public void Release()  { IsArrested = false; OnNeedsChanged?.Invoke(this); }
         public void MakeSick() { IsSick = true;  Add(ref stress, 15); Add(ref fatigue, 20); OnNeedsChanged?.Invoke(this); }
         public void Heal()     { IsSick = false; Add(ref stress, -10); OnNeedsChanged?.Invoke(this); }
+
+        /// <summary>Called by SurvivorWorkZone when the survivor enters/exits a work area.</summary>
+        public void SetWorking(bool working) { IsWorking = working; }
 
         public void SetOnMission(bool onMission)
         {

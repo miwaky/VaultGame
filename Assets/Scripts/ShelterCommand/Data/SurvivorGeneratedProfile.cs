@@ -7,12 +7,16 @@ namespace ShelterCommand
     /// Created at runtime by SurvivorProfileGenerator and carried by SurvivorBehavior.
     /// Replaces the static ScriptableObject approach for procedurally generated survivors.
     /// </summary>
+    /// <summary>Biological gender used to pick the correct visual model pool.</summary>
+    public enum SurvivorGender { Male, Female }
+
     [System.Serializable]
     public class SurvivorGeneratedProfile
     {
         // ── Identity ─────────────────────────────────────────────────────────────
-        public string survivorName;
-        public int    age;
+        public string         survivorName;
+        public int            age;
+        public SurvivorGender gender;
 
         // ── Profession ───────────────────────────────────────────────────────────
         public SurvivorProfession profession;

@@ -150,8 +150,3 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a6285a112c964e44bd555db6faaecf6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.SurvivorBehavior
-  data: {fileID: 0}
-  startRoom: 0
-  hunger: 50
-  fatigue: 30
-  stress: 20

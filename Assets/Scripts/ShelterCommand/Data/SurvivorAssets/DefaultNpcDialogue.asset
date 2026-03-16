@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7877d3dc47fbefc41b8772d71143fcb2, type: 3}
+  m_Name: DefaultNpcDialogue
+  m_EditorClassIdentifier: Assembly-CSharp::ShelterCommand.SurvivorNpcDialogue
+  idleLines:
+  - On s'en sortira. Il le faut.
+  - "Ce silence me p\xE8se. Mais je pr\xE9f\xE8re \xE7a au dehors."
+  - "J'essaie de ne pas trop penser \xE0 ce qu'on a laiss\xE9 l\xE0-haut."
+  - "Vous avez des nouvelles de l'ext\xE9rieur ?"
+  - Je fais avec. On n'a pas le choix.
+  - "\xC7a fait quoi de savoir que c'est peut-\xEAtre pour toujours ?"
+  - "Les murs me semblent moins \xE9troits aujourd'hui. Ou c'est moi qui m'y habitue."
+  - "Je dors mal. Trop de bruit dans ma t\xEAte."
+  workingLines:
+  - "Laissez-moi finir \xE7a, on se parlera apr\xE8s."
+  - "Si je m'arr\xEAte maintenant, on perd du temps."
+  - Je fais ma part. C'est tout ce que je peux faire.
+  - On a besoin de tout ce qu'on peut produire ici.
+  - "Concentr\xE9. On verra \xE7a plus tard."
+  movingLines:
+  - "J'ai quelque chose \xE0 faire, on se reparle !"
+  - "Pas le temps de m'arr\xEAter l\xE0."
+  - Je dois y aller.
+  - "Plus tard ! Je suis occup\xE9."

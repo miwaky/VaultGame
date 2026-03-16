@@ -66,7 +66,8 @@ namespace ShelterCommand
             SurvivorGeneratedProfile profile = new SurvivorGeneratedProfile();
 
             // Identity
-            bool isFemale    = Random.value > 0.5f;
+            bool isFemale        = Random.value > 0.5f;
+            profile.gender       = isFemale ? SurvivorGender.Female : SurvivorGender.Male;
             profile.survivorName = fixedName ?? GenerateName(isFemale);
             profile.age          = Random.Range(MinAge, MaxAge + 1);
 
@@ -100,6 +101,7 @@ namespace ShelterCommand
 
             profile.survivorName = data.survivorName;
             profile.age          = data.age;
+            profile.gender       = Random.value > 0.5f ? SurvivorGender.Female : SurvivorGender.Male;
             profile.profession   = PickRandom<SurvivorProfession>();
             profile.positiveTrait = PickRandom<PositiveTrait>();
             profile.negativeTrait = PickRandom<NegativeTrait>();

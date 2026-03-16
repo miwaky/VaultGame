@@ -3,26 +3,34 @@ using UnityEngine;
 namespace ShelterCommand
 {
     /// <summary>
-    /// Applies PSX-style vertex snapping and color depth reduction per mesh renderer.
-    /// Attach to a camera to affect all objects in view via the shader trick.
-    /// For URP-less setups we use a simple vertex-jitter approach.
-    /// Also handles the low-resolution render by downscaling the game view.
+    /// Applies PSX-style downscaling via a low-resolution RenderTexture.
+    /// PixelScale controls the intensity of the effect:
+    ///   1.0 = full PSX (320×240), 0.0 = native resolution (no pixelation).
+    /// The slider can be changed at runtime and the RT is rebuilt automatically.
     /// </summary>
     public class PSXPostProcess : MonoBehaviour
     {
         [Header("PSX Resolution")]
-        [SerializeField] private int targetWidth = 320;
-        [SerializeField] private int targetHeight = 240;
-        [SerializeField] private FilterMode filterMode = FilterMode.Point;
+        [Tooltip("Base resolution width at full PSX effect (pixelScale = 1).")]
+        [SerializeField] private int baseWidth  = 320;
+        [Tooltip("Base resolution height at full PSX effect (pixelScale = 1).")]
+        [SerializeField] private int baseHeight = 240;
+        [Tooltip("0 = native resolution (no pixelation)  |  1 = full PSX effect.")]
+        [SerializeField, Range(0f, 1f)] private float pixelScale = 1f;
 
         [Header("Flickering Light")]
         [SerializeField] private Light[] unstableLights;
         [SerializeField, Range(0f, 0.3f)] private float flickerAmplitude = 0.1f;
-        [SerializeField, Range(1f, 20f)] private float flickerFrequency = 8f;
+        [SerializeField, Range(1f, 20f)]  private float flickerFrequency = 8f;
+
+        // ── Private ───────────────────────────────────────────────────────────────
 
         private RenderTexture lowResRT;
-        private Camera cam;
-        private float[] lightBaseIntensities;
+        private Camera        cam;
+        private float[]       lightBaseIntensities;
+        private float         lastPixelScale = -1f;
+
+        // ── Lifecycle ─────────────────────────────────────────────────────────────
 
         private void Awake()
         {
@@ -30,25 +38,22 @@ namespace ShelterCommand
             CacheLightIntensities();
         }
 
-        private void OnEnable()
-        {
-            CreateLowResRT();
-        }
-
-        private void OnDisable()
-        {
-            CleanupRT();
-        }
+        private void OnEnable()  => CreateLowResRT();
+        private void OnDisable() => CleanupRT();
 
         private void Update()
         {
             FlickerLights();
+
+            // Rebuild RT when the slider changes at runtime
+            if (!Mathf.Approximately(pixelScale, lastPixelScale))
+                CreateLowResRT();
         }
 
         private void OnRenderImage(RenderTexture src, RenderTexture dest)
         {
-            // Blit to low-res then scale up with point filtering for the pixelated look
-            if (lowResRT == null)
+            // When pixelScale is effectively 0, skip the downscale entirely
+            if (lowResRT == null || pixelScale < 0.01f)
             {
                 Graphics.Blit(src, dest);
                 return;
@@ -58,24 +63,32 @@ namespace ShelterCommand
             Graphics.Blit(lowResRT, dest);
         }
 
-        // ── Private helpers ──────────────────────────────────────────────────────
+        // ── Private helpers ───────────────────────────────────────────────────────
 
         private void CreateLowResRT()
         {
+            lastPixelScale = pixelScale;
             CleanupRT();
-            lowResRT = new RenderTexture(targetWidth, targetHeight, 16);
-            lowResRT.filterMode = filterMode;
+
+            if (pixelScale < 0.01f) return;     // no pixelation needed
+
+            // Lerp between native screen resolution (full quality) and base PSX size
+            int w = Mathf.RoundToInt(Mathf.Lerp(Screen.width,  baseWidth,  pixelScale));
+            int h = Mathf.RoundToInt(Mathf.Lerp(Screen.height, baseHeight, pixelScale));
+            w = Mathf.Max(w, 1);
+            h = Mathf.Max(h, 1);
+
+            lowResRT            = new RenderTexture(w, h, 16);
+            lowResRT.filterMode = FilterMode.Point;
             lowResRT.Create();
         }
 
         private void CleanupRT()
         {
-            if (lowResRT != null)
-            {
-                lowResRT.Release();
-                Destroy(lowResRT);
-                lowResRT = null;
-            }
+            if (lowResRT == null) return;
+            lowResRT.Release();
+            Destroy(lowResRT);
+            lowResRT = null;
         }
 
         private void CacheLightIntensities()
@@ -83,18 +96,13 @@ namespace ShelterCommand
             if (unstableLights == null) return;
             lightBaseIntensities = new float[unstableLights.Length];
             for (int i = 0; i < unstableLights.Length; i++)
-            {
                 if (unstableLights[i] != null)
-                {
                     lightBaseIntensities[i] = unstableLights[i].intensity;
-                }
-            }
         }
 
         private void FlickerLights()
         {
             if (unstableLights == null || lightBaseIntensities == null) return;
-
             for (int i = 0; i < unstableLights.Length; i++)
             {
                 if (unstableLights[i] == null) continue;

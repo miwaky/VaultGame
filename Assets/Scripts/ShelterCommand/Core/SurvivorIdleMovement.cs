@@ -12,8 +12,9 @@ namespace ShelterCommand
     public class SurvivorIdleMovement : MonoBehaviour
     {
         private NavMeshAgent agent;
-        private Vector3 targetPosition;
-        private bool hasTarget;
+        private Vector3      targetPosition;
+        private bool         hasTarget;
+        private bool         destinationSet;
 
         private const float ArrivalThreshold = 0.5f;
 
@@ -27,16 +28,20 @@ namespace ShelterCommand
         {
             targetPosition = position;
             hasTarget      = true;
+            destinationSet = false;
         }
 
         private void Update()
         {
             if (!hasTarget || agent == null || !agent.isOnNavMesh) return;
 
-            // Issue the destination on the first valid frame (agent must be on NavMesh)
-            if (!agent.hasPath && !agent.pathPending)
+            // Issue destination once on the first valid frame — regardless of current path state
+            if (!destinationSet)
             {
+                agent.isStopped = false;
                 agent.SetDestination(targetPosition);
+                destinationSet = true;
+                return;
             }
 
             // Check arrival
