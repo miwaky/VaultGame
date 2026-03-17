@@ -55,6 +55,11 @@ namespace ShelterCommand
         private static readonly string[] TiredSuffixes    = { "Paraît épuisé(e).", "Des cernes profondes.", "Fatigué(e) mais debout." };
         private static readonly string[] WorriedSuffixes  = { "Les yeux inquiets.", "Tendu(e).", "Sur les nerfs." };
 
+        private const int MinTalentCount = 1;
+        private const int MaxTalentCount = 3;
+        // Probability (0–1) that each talent slot is an affinity talent vs fully random.
+        private const float AffinityBias = 0.65f;
+
         // ── Public API ────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -85,6 +90,9 @@ namespace ShelterCommand
             // Profession bonus
             ApplyProfessionBonuses(profile);
 
+            // Talent assignment
+            AssignTalents(profile);
+
             // Narrative text
             profile.PresentationText = BuildPresentationText(profile);
 
@@ -112,6 +120,8 @@ namespace ShelterCommand
             profile.SetStat(SurvivorStatIndex.Technique,    data.technical);
             profile.SetStat(SurvivorStatIndex.Social,       data.loyalty);   // loyalty maps to Social
             profile.SetStat(SurvivorStatIndex.Endurance,    data.endurance);
+
+            AssignTalents(profile);
 
             profile.PresentationText = BuildPresentationText(profile);
             return profile;
@@ -163,6 +173,46 @@ namespace ShelterCommand
             Dictionary<SurvivorStatIndex, int> bonuses = ProfessionBonusTable.GetBonuses(profile.profession);
             foreach (KeyValuePair<SurvivorStatIndex, int> kvp in bonuses)
                 profile.AddToStat(kvp.Key, kvp.Value);
+        }
+
+        private static void AssignTalents(SurvivorGeneratedProfile profile)
+        {
+            int count = Random.Range(MinTalentCount, MaxTalentCount + 1);
+            var assigned = new HashSet<SurvivorTalent>();
+            var affinities = TalentTable.GetAffinityTalents(profile.profession);
+            var all = TalentTable.AllTalents;
+
+            for (int i = 0; i < count; i++)
+            {
+                SurvivorTalent chosen;
+
+                // Try affinity talent first with configurable bias
+                if (affinities.Count > 0 && Random.value < AffinityBias)
+                {
+                    int attempts = 0;
+                    do
+                    {
+                        chosen = affinities[Random.Range(0, affinities.Count)];
+                        attempts++;
+                    }
+                    while (assigned.Contains(chosen) && attempts < 10);
+                }
+                else
+                {
+                    int attempts = 0;
+                    do
+                    {
+                        chosen = all[Random.Range(0, all.Length)];
+                        attempts++;
+                    }
+                    while (assigned.Contains(chosen) && attempts < 20);
+                }
+
+                if (!assigned.Contains(chosen))
+                    assigned.Add(chosen);
+            }
+
+            profile.SetTalents(assigned);
         }
 
         private static string BuildPresentationText(SurvivorGeneratedProfile profile)

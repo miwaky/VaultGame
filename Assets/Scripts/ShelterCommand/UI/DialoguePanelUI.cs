@@ -208,24 +208,77 @@ namespace ShelterCommand
 
             if (okButton != null) okButton.gameObject.SetActive(false);
 
+            // Gather survivor profiles from the current mission for condition evaluation
+            IReadOnlyList<SurvivorGeneratedProfile> profiles = GatherMissionProfiles();
+
             foreach (DialogueChoice choice in node.choices)
             {
                 if (choice == null) continue;
 
+                // Evaluate conditions
+                bool conditionMet = true;
+                string failHint   = string.Empty;
+                ConditionFailBehaviour failBehaviour = ConditionFailBehaviour.Disable;
+
+                if (choice.condition != null && !choice.condition.IsEmpty)
+                {
+                    conditionMet = choice.condition.Evaluate(profiles, out failHint);
+                    failBehaviour = choice.condition.failBehaviour;
+
+                    // Skip hidden choices entirely
+                    if (!conditionMet && failBehaviour == ConditionFailBehaviour.Hide)
+                        continue;
+                }
+
                 GameObject btnGo = Instantiate(choiceButtonPrefab, choicesContainer);
                 spawnedButtons.Add(btnGo);
 
+                // Build label — append hint when conditions are not met
+                string rawText  = ctx != null ? ctx.Apply(choice.choiceText) : choice.choiceText;
+                string fullText = conditionMet || string.IsNullOrEmpty(failHint)
+                    ? rawText
+                    : $"{rawText} <color=#FF6B6B><size=85%>{failHint}</size></color>";
+
                 TextMeshProUGUI lbl = btnGo.GetComponentInChildren<TextMeshProUGUI>(true);
                 if (lbl != null)
-                    lbl.text = ctx != null ? ctx.Apply(choice.choiceText) : choice.choiceText;
+                    lbl.text = fullText;
 
                 Button btn = btnGo.GetComponent<Button>();
                 if (btn != null)
                 {
-                    DialogueChoice captured = choice;
-                    btn.onClick.AddListener(() => manager?.OnChoiceSelected(captured));
+                    if (conditionMet)
+                    {
+                        DialogueChoice captured = choice;
+                        btn.onClick.AddListener(() => manager?.OnChoiceSelected(captured));
+                    }
+                    else
+                    {
+                        // Greyed out — interactable false and dimmed color
+                        btn.interactable = false;
+                        if (lbl != null)
+                            lbl.color = new Color(lbl.color.r, lbl.color.g, lbl.color.b, 0.45f);
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Collects SurvivorGeneratedProfile from the current active mission via DialogueManager.
+        /// Falls back to an empty list if no mission is active.
+        /// </summary>
+        private IReadOnlyList<SurvivorGeneratedProfile> GatherMissionProfiles()
+        {
+            ActiveMission mission = DialogueManager.Instance?.CurrentMission;
+            if (mission == null || mission.Survivors.Count == 0)
+                return System.Array.Empty<SurvivorGeneratedProfile>();
+
+            var profiles = new List<SurvivorGeneratedProfile>(mission.Survivors.Count);
+            foreach (SurvivorBehavior s in mission.Survivors)
+            {
+                if (s != null && s.GeneratedProfile != null)
+                    profiles.Add(s.GeneratedProfile);
+            }
+            return profiles;
         }
 
         private void ClearChoices()

@@ -6,15 +6,23 @@ using TMPro;
 namespace ShelterCommand
 {
     /// <summary>
-    /// Panel d'exploration — sans gestion de missions.
+    /// Panel d'exploration avec navigation par onglets.
     ///
-    /// GAUCHE  — Liste cliquable des survivants disponibles (scroll).
-    /// CENTRE  — Carte avec zones cliquables (MapZoneButton).
-    /// DROITE  — Résumé (survivants, zone, durée) + bouton Envoyer.
-    ///           En bas : survivants en exploration + bouton Rappeler.
+    /// ONGLET 1 — Nouvelle expédition : liste survivants + carte + résumé/lancement.
+    /// ONGLET 2 — Gérer expéditions   : liste des missions actives et en attente.
     /// </summary>
     public class ExplorationPanelUI : MonoBehaviour
     {
+        // ── Navigation ────────────────────────────────────────────────────────────
+        [Header("Navigation")]
+        [SerializeField] private GameObject viewNouvelleExpedition;
+        [SerializeField] private GameObject viewGererExpeditions;
+        [SerializeField] private Button     btnNouvelleExpedition;
+        [SerializeField] private Button     btnGererExpeditions;
+
+        private static readonly Color ColorTabActive   = new Color(0.10f, 0.40f, 0.10f, 1f);
+        private static readonly Color ColorTabInactive = new Color(0.06f, 0.20f, 0.06f, 1f);
+
         // ── Survivor list ──────────────────────────────────────────────────────────
         [Header("Survivor List (left column)")]
         [SerializeField] private Transform          survivorListContainer;
@@ -33,9 +41,11 @@ namespace ShelterCommand
         [SerializeField] private Button             launchButton;
         [SerializeField] private TextMeshProUGUI    launchFeedbackText;
 
-        // ── Exploring missions list ───────────────────────────────────────────────
+        [Header("Equipment panel")]
+        [SerializeField] private MissionEquipmentUI equipmentPanel;
 
-        [Header("Exploring Missions (right column, bottom)")]
+        // ── Exploring missions list ───────────────────────────────────────────────
+        [Header("Exploring Missions (vue Gérer)")]
         [Tooltip("Parent transform where MissionEntryUI rows are spawned.")]
         [SerializeField] private Transform  exploringListContainer;
         [Tooltip("Prefab with a MissionEntryUI component.")]
@@ -66,6 +76,11 @@ namespace ShelterCommand
         private void Awake()
         {
             launchButton?.onClick.AddListener(OnLaunch);
+            btnNouvelleExpedition?.onClick.AddListener(ShowNouvelleExpedition);
+            btnGererExpeditions?.onClick.AddListener(ShowGererExpeditions);
+
+            // Vue par défaut : Nouvelle expédition
+            ShowNouvelleExpedition();
         }
 
         private void OnEnable()
@@ -96,6 +111,44 @@ namespace ShelterCommand
                 dayCycleManager.OnPreWorkStart -= BuildExploringList;
                 dayCycleManager.OnWorkStart    -= BuildExploringList;
             }
+        }
+
+        // ── Navigation ────────────────────────────────────────────────────────────
+
+        /// <summary>Affiche la vue "Nouvelle expédition" et met le bouton correspondant en actif.</summary>
+        public void ShowNouvelleExpedition()
+        {
+            viewNouvelleExpedition?.SetActive(true);
+            viewGererExpeditions?.SetActive(false);
+            SetTabColor(btnNouvelleExpedition, active: true);
+            SetTabColor(btnGererExpeditions,   active: false);
+
+            BuildSurvivorList();
+            RefreshSummary();
+        }
+
+        /// <summary>Affiche la vue "Gérer expéditions" et rafraîchit la liste des missions.</summary>
+        public void ShowGererExpeditions()
+        {
+            viewNouvelleExpedition?.SetActive(false);
+            viewGererExpeditions?.SetActive(true);
+            SetTabColor(btnNouvelleExpedition, active: false);
+            SetTabColor(btnGererExpeditions,   active: true);
+
+            BuildExploringList();
+        }
+
+        private static void SetTabColor(Button btn, bool active)
+        {
+            if (btn == null) return;
+            Image img = btn.GetComponent<Image>();
+            if (img != null) img.color = active ? ColorTabActive : ColorTabInactive;
+
+            // Texte légèrement plus lumineux sur l'onglet actif
+            TextMeshProUGUI lbl = btn.GetComponentInChildren<TextMeshProUGUI>();
+            if (lbl != null) lbl.color = active
+                ? new Color(0.8f, 1f, 0.8f, 1f)
+                : new Color(0.5f, 0.7f, 0.5f, 1f);
         }
 
         // ── Public API ────────────────────────────────────────────────────────────
@@ -282,18 +335,41 @@ namespace ShelterCommand
 
             ExplorationZone zone = selectedZone.Zone;
 
-            // Delegate to RadioCallManager — survivors will depart tomorrow at 07:00
-            if (RadioCallManager.Instance != null)
-                RadioCallManager.Instance.ScheduleExploration(new System.Collections.Generic.List<SurvivorBehavior>(selectedSurvivors), zone);
+            // Ouvre le panel d'équipement — le lancement réel se fait dans OnEquipmentConfirmed
+            if (equipmentPanel != null)
+            {
+                equipmentPanel.Open(zone.zoneName, zone.daysFromBase,
+                    selectedSurvivors.Count,
+                    (food, water) => OnEquipmentConfirmed(zone, food, water));
+            }
             else
             {
-                // Fallback: immediate departure if no RadioCallManager in scene
+                // Fallback sans panel d'équipement
+                LaunchMission(zone, 0, 0);
+            }
+        }
+
+        private void OnEquipmentConfirmed(ExplorationZone zone, int food, int water)
+        {
+            LaunchMission(zone, food, water);
+        }
+
+        private void LaunchMission(ExplorationZone zone, int food, int water)
+        {
+            if (RadioCallManager.Instance != null)
+                RadioCallManager.Instance.ScheduleExploration(
+                    new System.Collections.Generic.List<SurvivorBehavior>(selectedSurvivors), zone);
+            else
+            {
                 foreach (SurvivorBehavior survivor in selectedSurvivors)
                     survivor.SetOnMission(true);
                 Debug.LogWarning("[ExplorationPanelUI] RadioCallManager absent — départ immédiat.");
             }
 
-            ShowFeedback($"Départ demain 07:00 → {zone.zoneName} ({zone.daysFromBase}j).", false);
+            string provisions = food > 0 || water > 0
+                ? $"  ({food} nourritures, {water} eaux)"
+                : "";
+            ShowFeedback($"Départ demain 07:00 → {zone.zoneName} ({zone.daysFromBase}j){provisions}.", false);
 
             selectedSurvivors.Clear();
             selectedZone.SetSelected(false);
@@ -322,7 +398,7 @@ namespace ShelterCommand
                 if (mission == null) continue;
                 GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
                 MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
-                entry?.BindActiveMission(mission, missionTooltip);
+                entry?.BindActiveMission(mission);
             }
 
             // ── Pending zone missions (depart tomorrow) ───────────────────────────
@@ -331,17 +407,16 @@ namespace ShelterCommand
                 if (zone == null) continue;
                 GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
                 MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
-                entry?.BindPending(zone.zoneName, survivors, zone.equipment, missionTooltip);
+                entry?.BindPendingZone(survivors, zone);
             }
 
             // ── Pending data-driven missions (depart tomorrow) ────────────────────
             foreach ((List<SurvivorBehavior> survivors, MissionData data) in rcm.PendingDataMissions)
             {
                 if (data == null) continue;
-                string[]       gear  = data.equipment?.Length > 0 ? data.equipment : data.zone?.equipment;
                 GameObject     row   = Instantiate(exploringRowPrefab, exploringListContainer);
                 MissionEntryUI entry = row.GetComponent<MissionEntryUI>();
-                entry?.BindPending(data.displayName, survivors, gear, missionTooltip);
+                entry?.BindPendingData(survivors, data);
             }
         }
 

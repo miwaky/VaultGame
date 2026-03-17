@@ -99,6 +99,9 @@ namespace ShelterCommand
         [Tooltip("Days before the follow-up call fires (1 = tomorrow).")]
         [Min(1)]
         public int followUpDelayDays = 1;
+
+        [Tooltip("Conditions required for this choice to be available. Leave empty for unconditional choices.")]
+        public DialogueChoiceCondition condition;
     }
 
     // ── ScriptableObject ──────────────────────────────────────────────────────────

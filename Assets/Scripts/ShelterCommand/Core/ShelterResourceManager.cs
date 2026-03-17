@@ -7,6 +7,7 @@ namespace ShelterCommand
     /// Centralized manager for all shelter resources.
     /// Fires events when resources change so the HUD can update.
     /// Food and Water are tracked as float to support fractional hourly production.
+    /// FoodInt / WaterInt reflect the real physical item count from StorageRegistry.
     /// </summary>
     public class ShelterResourceManager : MonoBehaviour
     {
@@ -22,12 +23,22 @@ namespace ShelterCommand
         public int   Materials => resources.materials;
         public int   Energy    => resources.energy;
 
-        // Integer shims used by HUD display (floor)
-        public int FoodInt  => Mathf.FloorToInt(resources.food);
-        public int WaterInt => Mathf.FloorToInt(resources.water);
+        // Integer shims used by HUD display — read directly from the physical storage
+        public int FoodInt  => StorageRegistry.CountItems(ResourceType.Food);
+        public int WaterInt => StorageRegistry.CountItems(ResourceType.Water);
 
         /// <summary>Returns a reference to the live resource container (modified by survivors).</summary>
         public ShelterResources Resources => resources;
+
+        private void OnEnable()
+        {
+            StorageRegistry.OnStorageChanged += NotifyChanged;
+        }
+
+        private void OnDisable()
+        {
+            StorageRegistry.OnStorageChanged -= NotifyChanged;
+        }
 
         /// <summary>Applies end-of-day consumption (1 Food + 1 Water per survivor).</summary>
         public void ApplyDailyConsumption(int survivorCount)

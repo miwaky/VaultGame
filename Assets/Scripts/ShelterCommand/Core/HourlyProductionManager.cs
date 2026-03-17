@@ -75,6 +75,11 @@ namespace ShelterCommand
         /// <summary>Returns the number of workers currently assigned to water management.</summary>
         public int WorkersWater => CountWorkersForTask(DailyTask.SoccuperDeLeau);
 
+        /// <summary>
+        /// Triggers the daily consumption immediately (used by BedProp when the player sleeps).
+        /// </summary>
+        public void TriggerSleepConsumption() => ApplyMidnightConsumption();
+
         // ── Private ────────────────────────────────────────────────────────────────
 
         private void HandleTimeChanged(int hour, int minute)
@@ -127,23 +132,40 @@ namespace ShelterCommand
         {
             if (survivorManager == null || resourceManager == null) return;
 
-            int population = survivorManager.AliveSurvivorCount;
+            // Survivants présents dans l'abri (vivants et pas en mission)
+            // + 1 pour le garde Steve + 1 pour le joueur
+            const int GuardAndPlayerCount = 2;
+            int survivorsInShelter = 0;
+            foreach (SurvivorBehavior s in survivorManager.GetAliveSurvivors())
+            {
+                if (!s.IsOnMission)
+                    survivorsInShelter++;
+            }
+            int totalConsumers = survivorsInShelter + GuardAndPlayerCount;
 
-            // 1 Food + 1 Water per survivor per day
-            float foodBefore  = resourceManager.Food;
-            float waterBefore = resourceManager.Water;
+            int foodConsumed  = 0;
+            int waterConsumed = 0;
 
-            resourceManager.AddFood(-population);
-            resourceManager.AddWater(-population);
+            for (int i = 0; i < totalConsumers; i++)
+            {
+                if (StorageRegistry.ConsumeItem(ResourceType.Food))
+                    foodConsumed++;
+            }
+            for (int i = 0; i < totalConsumers; i++)
+            {
+                if (StorageRegistry.ConsumeItem(ResourceType.Water))
+                    waterConsumed++;
+            }
 
-            int foodConsumed  = Mathf.RoundToInt(foodBefore  - resourceManager.Food);
-            int waterConsumed = Mathf.RoundToInt(waterBefore - resourceManager.Water);
+            // Synchronise le compteur abstrait avec ce qui a réellement été retiré
+            if (foodConsumed  > 0) resourceManager.AddFood(-foodConsumed);
+            if (waterConsumed > 0) resourceManager.AddWater(-waterConsumed);
 
             OnDailyConsumption?.Invoke(foodConsumed, waterConsumed);
 
-            Debug.Log($"[HourlyProductionManager] 00:00 — Consommation journalière : " +
+            Debug.Log($"[HourlyProductionManager] Consommation journalière : " +
                       $"-{foodConsumed} nourr. / -{waterConsumed} eau " +
-                      $"({population} survivants) | " +
+                      $"({survivorsInShelter} survivants abri + {GuardAndPlayerCount} garde/joueur = {totalConsumers} total) | " +
                       $"Stock restant: {resourceManager.Food:F1} nourr. / {resourceManager.Water:F1} eau");
         }
 

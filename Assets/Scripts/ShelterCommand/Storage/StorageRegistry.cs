@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,6 +12,9 @@ namespace ShelterCommand
     public static class StorageRegistry
     {
         private static readonly List<StorageShelf> shelves = new List<StorageShelf>();
+
+        /// <summary>Fired whenever a physical item is added or removed from storage.</summary>
+        public static event Action OnStorageChanged;
 
         /// <summary>Registers a shelf when it is enabled.</summary>
         public static void Register(StorageShelf shelf)
@@ -36,11 +40,15 @@ namespace ShelterCommand
                 if (shelf.ConsumeItem(type))
                 {
                     Debug.Log($"[StorageRegistry] Consommé : {type} depuis {shelf.gameObject.name}");
+                    OnStorageChanged?.Invoke();
                     return true;
                 }
             }
             return false;
         }
+
+        /// <summary>Call this after manually adding an item to a shelf so the HUD refreshes.</summary>
+        public static void NotifyItemAdded() => OnStorageChanged?.Invoke();
 
         /// <summary>Counts total items of a given type across all shelves.</summary>
         public static int CountItems(ResourceType type)

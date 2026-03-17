@@ -90,6 +90,9 @@ namespace ShelterCommand
                 placed++;
             }
 
+            if (placed > 0)
+                StorageRegistry.NotifyItemAdded();
+
             return placed;
         }
 

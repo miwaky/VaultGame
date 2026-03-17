@@ -6,40 +6,49 @@ namespace ShelterCommand
 {
     /// <summary>
     /// Manages the Residents panel of the computer terminal.
-    /// Left column: scrollable list of survivor buttons.
-    /// Right column: profile details of the selected survivor (name, age, profession, stats, traits).
+    /// Left column  : scrollable list of survivor buttons.
+    /// Right column : rich profile view via ResidentDetailPanelUI
+    ///                (stats bars, talents, traits, real-time needs).
     ///
-    /// Wire up all serialized fields in the Inspector.
+    /// Wire up listContainer, residentEntryPrefab, detailsColumn and closeButton
+    /// in the Inspector. Legacy TMP labels (detailNameText etc.) are kept as
+    /// optional fallback references but are hidden when the rich panel is active.
     /// </summary>
     public class ResidentsPanelUI : MonoBehaviour
     {
-        // ── Left column — survivor list ─────────────────────────────────────────
+        // ── Left column ──────────────────────────────────────────────────────────
         [Header("Survivor List (left)")]
-        [SerializeField] private Transform    listContainer;
-        [SerializeField] private GameObject   residentEntryPrefab;
+        [SerializeField] private Transform  listContainer;
+        [SerializeField] private GameObject residentEntryPrefab;
 
-        // ── Right column — survivor details ─────────────────────────────────────
+        // ── Right column — rich panel ────────────────────────────────────────────
         [Header("Details (right)")]
-        [SerializeField] private GameObject      detailsRoot;
+        [Tooltip("The DetailsColumn RectTransform. ResidentDetailPanelUI is built inside it.")]
+        [SerializeField] private RectTransform detailsColumn;
+
+        [Tooltip("Legacy TMP labels — kept for Inspector wiring but hidden at runtime.")]
+        [SerializeField] private GameObject detailsRoot;
         [SerializeField] private TextMeshProUGUI detailNameText;
         [SerializeField] private TextMeshProUGUI detailIdentityText;
         [SerializeField] private TextMeshProUGUI detailStatsText;
         [SerializeField] private TextMeshProUGUI detailTraitsText;
         [SerializeField] private TextMeshProUGUI detailStatusText;
 
-        // ── Navigation ──────────────────────────────────────────────────────────
+        // ── Navigation ───────────────────────────────────────────────────────────
         [Header("Navigation")]
         [SerializeField] private Button closeButton;
 
-        // ── Dependencies ────────────────────────────────────────────────────────
-        private SurvivorManager       survivorManager;
-        private ComputerMenuController menuController;
+        // ── Runtime ──────────────────────────────────────────────────────────────
+        private SurvivorManager        survivorManager;
+        private ComputerMenuController  menuController;
+        private ResidentDetailPanelUI   detailPanel;
 
-        // ── Lifecycle ───────────────────────────────────────────────────────────
+        // ── Lifecycle ────────────────────────────────────────────────────────────
 
         private void Awake()
         {
             closeButton?.onClick.AddListener(OnClose);
+            BuildDetailPanel();
         }
 
         private void OnEnable()
@@ -47,7 +56,7 @@ namespace ShelterCommand
             ResolveReferences();
         }
 
-        // ── Public API ──────────────────────────────────────────────────────────
+        // ── Public API ───────────────────────────────────────────────────────────
 
         /// <summary>Rebuilds the survivor list and auto-selects the first alive one.</summary>
         public void Populate()
@@ -57,7 +66,7 @@ namespace ShelterCommand
 
             if (survivorManager == null) return;
 
-            SafeSetActive(detailsRoot, false);
+            detailPanel?.Hide();
             bool first = true;
 
             foreach (SurvivorBehavior survivor in survivorManager.Survivors)
@@ -80,38 +89,35 @@ namespace ShelterCommand
             }
         }
 
-        // ── Private ─────────────────────────────────────────────────────────────
+        // ── Private ──────────────────────────────────────────────────────────────
+
+        /// <summary>Creates the ResidentDetailPanelUI component and hides legacy labels.</summary>
+        private void BuildDetailPanel()
+        {
+            // Hide legacy raw-text labels — the rich panel takes over
+            SafeSetActive(detailsRoot, false);
+            SafeSetActive(detailNameText?.gameObject,     false);
+            SafeSetActive(detailIdentityText?.gameObject, false);
+            SafeSetActive(detailStatsText?.gameObject,    false);
+            SafeSetActive(detailTraitsText?.gameObject,   false);
+            SafeSetActive(detailStatusText?.gameObject,   false);
+
+            if (detailsColumn == null) return;
+
+            // Attach the rich panel component to the DetailsColumn itself
+            detailPanel = detailsColumn.gameObject.GetComponent<ResidentDetailPanelUI>();
+            if (detailPanel == null)
+                detailPanel = detailsColumn.gameObject.AddComponent<ResidentDetailPanelUI>();
+
+            // Inject the column reference via reflection-free setter
+            detailPanel.InjectColumn(detailsColumn);
+            detailPanel.Hide();
+        }
 
         private void ShowDetails(SurvivorBehavior survivor)
         {
             if (survivor == null) return;
-
-            SafeSetActive(detailsRoot, true);
-            SurvivorGeneratedProfile p = survivor.GeneratedProfile;
-
-            SetText(detailNameText, survivor.SurvivorName.ToUpper());
-
-            if (p != null)
-            {
-                SetText(detailIdentityText, p.GetIdentityDisplayText());
-                SetText(detailStatsText,    p.GetStatsDisplayText());
-                SetText(detailTraitsText,
-                    $"+ {TraitLabels.GetLabel(p.positiveTrait)}" +
-                    $"\n— {TraitLabels.GetLabel(p.negativeTrait)}");
-            }
-            else
-            {
-                SetText(detailIdentityText, "—");
-                SetText(detailStatsText,    "—");
-                SetText(detailTraitsText,   "—");
-            }
-
-            string status = !survivor.IsAlive    ? "DÉCÉDÉ"    :
-                             survivor.IsOnMission ? "EN MISSION" :
-                             survivor.IsSick      ? "MALADE"     :
-                             survivor.IsArrested  ? "ARRÊTÉ"     :
-                                                    "Actif";
-            SetText(detailStatusText, $"État : {status}");
+            detailPanel?.Show(survivor);
         }
 
         private void ClearList()
@@ -127,14 +133,8 @@ namespace ShelterCommand
         {
             if (survivorManager == null)
                 survivorManager = FindFirstObjectByType<SurvivorManager>();
-
             if (menuController == null)
                 menuController = FindFirstObjectByType<ComputerMenuController>();
-        }
-
-        private static void SetText(TextMeshProUGUI t, string s)
-        {
-            if (t != null) t.text = s;
         }
 
         private static void SafeSetActive(GameObject go, bool active)

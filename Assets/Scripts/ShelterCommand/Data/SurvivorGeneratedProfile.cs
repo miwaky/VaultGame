@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ShelterCommand
@@ -25,6 +26,23 @@ namespace ShelterCommand
         public PositiveTrait positiveTrait;
         public NegativeTrait negativeTrait;
 
+        // ── Talents (1 to 3 special skills) ──────────────────────────────────────
+        [SerializeField] private List<SurvivorTalent> talents = new List<SurvivorTalent>();
+
+        /// <summary>Read-only list of talents assigned to this survivor.</summary>
+        public IReadOnlyList<SurvivorTalent> Talents => talents;
+
+        /// <summary>Returns true when this survivor possesses the given talent.</summary>
+        public bool HasTalent(SurvivorTalent talent) => talents.Contains(talent);
+
+        /// <summary>Assigns the talent list (replaces any existing talents).</summary>
+        public void SetTalents(IEnumerable<SurvivorTalent> newTalents)
+        {
+            talents.Clear();
+            if (newTalents != null)
+                talents.AddRange(newTalents);
+        }
+
         // ── Stats (indexed by SurvivorStatIndex) ─────────────────────────────────
         // Order: Force, Intelligence, Technique, Social, Endurance
         [SerializeField] private int[] stats = new int[5];
@@ -51,7 +69,11 @@ namespace ShelterCommand
 
         // ── Constructor ───────────────────────────────────────────────────────────
 
-        public SurvivorGeneratedProfile() { stats = new int[5]; }
+        public SurvivorGeneratedProfile()
+        {
+            stats   = new int[5];
+            talents = new List<SurvivorTalent>();
+        }
 
         /// <summary>Sets a raw stat value, clamped to [0, 100].</summary>
         public void SetStat(SurvivorStatIndex index, int value)
@@ -73,6 +95,21 @@ namespace ShelterCommand
         {
             return $"Force {Force}  •  Intel. {Intelligence}  •  Tech. {Technique}" +
                    $"\nSocial {Social}  •  Endurance {Endurance}";
+        }
+
+        /// <summary>Returns a formatted talents line for display in UI.</summary>
+        public string GetTalentsDisplayText()
+        {
+            if (talents == null || talents.Count == 0)
+                return "Aucun talent";
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < talents.Count; i++)
+            {
+                if (i > 0) sb.Append("  •  ");
+                sb.Append(TalentTable.GetLabel(talents[i]));
+            }
+            return sb.ToString();
         }
 
         /// <summary>Returns formatted identity block for display in UI.</summary>

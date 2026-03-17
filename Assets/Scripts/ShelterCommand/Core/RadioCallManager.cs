@@ -16,6 +16,24 @@ namespace ShelterCommand
         public int                    MissionDay     => currentMissionDay;
         public bool                   HasDeparted    { get; private set; }
 
+        /// <summary>
+        /// Nombre de jours pour rentrer à la base depuis la position actuelle.
+        /// Jour 0 (pas encore parti) → 0 (annulation directe).
+        /// Jour 1 sur un voyage de 3 → 1 jour parcouru → 1 jour de retour.
+        /// Jour N ≥ totalDays → à destination → totalDays jours de retour.
+        /// </summary>
+        public int ReturnDays
+        {
+            get
+            {
+                if (!HasDeparted) return 0;
+                int total = Zone?.daysFromBase ?? 1;
+                // Position actuelle = min(MissionDay, total) jours depuis la base
+                int daysFromBase = Mathf.Min(currentMissionDay, total);
+                return Mathf.Max(1, daysFromBase);
+            }
+        }
+
         // Resources accumulated during the mission (applied physically on return)
         private readonly Dictionary<ResourceType, int> accumulatedResources =
             new Dictionary<ResourceType, int>();
@@ -253,6 +271,29 @@ namespace ShelterCommand
             int targetDay = mission.MissionDay + delayDays;
             followUpCalls.Add((call, mission, targetDay));
             Debug.Log($"[RadioCallManager] Follow-up '{call.name}' programmé au jour mission {targetDay}.");
+        }
+
+        /// <summary>
+        /// Annule une mission en attente (non encore partie).
+        /// Les survivants sont libérés immédiatement.
+        /// </summary>
+        public void CancelPendingZoneMission(List<SurvivorBehavior> survivors, ExplorationZone zone)
+        {
+            int idx = pendingMissions.FindIndex(t => t.Item1 == survivors && t.Item2 == zone);
+            if (idx < 0) return;
+            pendingMissions.RemoveAt(idx);
+            Debug.Log($"[RadioCallManager] Mission vers {zone?.zoneName} annulée avant départ.");
+        }
+
+        /// <summary>
+        /// Annule une mission data-driven en attente (non encore partie).
+        /// </summary>
+        public void CancelPendingDataMission(List<SurvivorBehavior> survivors, MissionData data)
+        {
+            int idx = pendingDataMissions.FindIndex(t => t.Item1 == survivors && t.Item2 == data);
+            if (idx < 0) return;
+            pendingDataMissions.RemoveAt(idx);
+            Debug.Log($"[RadioCallManager] Mission '{data?.missionID}' annulée avant départ.");
         }
 
         /// <summary>

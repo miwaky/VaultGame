@@ -45,6 +45,9 @@ namespace ShelterCommand
         private Coroutine            timerCoroutine;
         private GameObject           radioInstance;
 
+        /// <summary>The active mission tied to the current dialogue, or null when no dialogue is running.</summary>
+        public ActiveMission CurrentMission => currentMission;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────────
 
         private void Awake()

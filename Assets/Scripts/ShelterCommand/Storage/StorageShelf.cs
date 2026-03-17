@@ -260,6 +260,7 @@ namespace ShelterCommand
 
             slot.Occupy(item);
             item.OnStored(slot, itemPlacementOffset);
+            StorageRegistry.NotifyItemAdded();
             Debug.Log($"[StorageShelf] '{item.ItemData?.displayName}' → slot {slot.name}.");
         }
 
@@ -295,6 +296,7 @@ namespace ShelterCommand
                     ResourceItemBehavior item = slot.StoredItem;
                     item.OnRemovedFromStorage();
                     RefreshAcceptedType();
+                    StorageRegistry.NotifyItemAdded();
                     carry.TryPickUp(item);
                     return;
                 }

@@ -27,6 +27,7 @@ namespace ShelterCommand
         [SerializeField] private TextMeshProUGUI presentationText;
         [SerializeField] private TextMeshProUGUI identityText;
         [SerializeField] private TextMeshProUGUI statsText;
+        [SerializeField] private TextMeshProUGUI talentsText;
 
         [Header("Close")]
         [SerializeField] private Button closeButton;
@@ -101,6 +102,7 @@ namespace ShelterCommand
                 SetText(presentationText, profile.PresentationText);
                 SetText(identityText,     profile.GetIdentityDisplayText());
                 SetText(statsText,        profile.GetStatsDisplayText());
+                SetText(talentsText,      profile.GetTalentsDisplayText());
             }
             else
             {
@@ -159,10 +161,11 @@ namespace ShelterCommand
             layout.childForceExpandWidth = true;
 
             // Labels
-            survivorNameText = MakeLabel(panelGo, "NameText",  22, FontStyles.Bold,   Color.white);
-            presentationText = MakeLabel(panelGo, "PresText",  13, FontStyles.Italic,  new Color(0.82f, 0.82f, 0.82f));
-            identityText     = MakeLabel(panelGo, "IdentText", 12, FontStyles.Normal,  new Color(0.55f, 0.85f, 1f));
-            statsText        = MakeLabel(panelGo, "StatsText", 12, FontStyles.Normal,  new Color(0.6f, 1f, 0.6f));
+            survivorNameText = MakeLabel(panelGo, "NameText",    22, FontStyles.Bold,   Color.white);
+            presentationText = MakeLabel(panelGo, "PresText",    13, FontStyles.Italic,  new Color(0.82f, 0.82f, 0.82f));
+            identityText     = MakeLabel(panelGo, "IdentText",   12, FontStyles.Normal,  new Color(0.55f, 0.85f, 1f));
+            statsText        = MakeLabel(panelGo, "StatsText",   12, FontStyles.Normal,  new Color(0.6f, 1f, 0.6f));
+            talentsText      = MakeLabel(panelGo, "TalentsText", 12, FontStyles.Normal,  new Color(1f, 0.85f, 0.4f));
 
             MakeDivider(panelGo);
             closeButton = MakeCloseButton(panelGo);
